@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ultimate Neo-Brutalism 3D Engine</title>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="panel-hidden">
+
+    <div class="app-layout">
+        
+        <aside class="engine-panel" id="controls">
+            <h3>Physics Engine Tuning</h3>
+            <div class="control-group">
+                <label>Local Hover <span>(Mouse)</span></label>
+                <input type="range" id="w-local" min="0" max="30" value="15">
+            </div>
+            <div class="control-group">
+                <label>Global Gravity <span>(Env)</span></label>
+                <input type="range" id="w-global" min="0" max="10" value="3">
+            </div>
+            <div class="control-group">
+                <label>Gyroscope <span>(Device)</span></label>
+                <input type="range" id="w-gyro" min="0" max="40" value="20">
+            </div>
+            <div class="control-group">
+                <label>Scroll Velocity <span>(Pulse)</span></label>
+                <input type="range" id="w-scroll" min="0" max="1" step="0.01" value="0.1">
+            </div>
+        </aside>
+
+        <div class="hud-controls">
+            <button class="btn" id="toggle-panel">⚙️ Tuning</button>
+            <button class="btn" id="gyro-btn">📱 Motion: OFF</button>
+            <button class="btn" id="theme-btn">🌙 Theme</button>
+        </div>
+        
+        <div id="fps-meter">FPS: 60 | Nodes: 0</div>
+
+        <div class="card-grid" id="grid">
+            </div>
+
+    </div>
+
+    <script src="js/main.js" type="module" defer></script>
+</body>
+</html>
