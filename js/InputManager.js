@@ -41,10 +41,28 @@ export function initInputListeners() {
         wakeUp();
     }, { passive: true });
 
-    document.getElementById('w-local').oninput = e => { Weights.local = +e.target.value; wakeUp(); };
-    document.getElementById('w-global').oninput = e => { Weights.global = +e.target.value; wakeUp(); };
-    document.getElementById('w-gyro').oninput = e => { Weights.gyro = +e.target.value; wakeUp(); };
-    document.getElementById('w-scroll').oninput = e => { Weights.scroll = +e.target.value; wakeUp(); };
+    // Initialize range inputs with output display for accessibility
+    const initRangeInput = (inputId, outputId, weightKey) => {
+        const input = document.getElementById(inputId);
+        const output = document.getElementById(outputId);
+        
+        if (input) {
+            input.addEventListener('input', e => {
+                const value = +e.target.value;
+                Weights[weightKey] = value;
+                if (output) output.textContent = value.toFixed(2);
+                wakeUp();
+            });
+            
+            // Set initial output value
+            if (output) output.textContent = input.value;
+        }
+    };
+
+    initRangeInput('w-local', 'w-local-value', 'local');
+    initRangeInput('w-global', 'w-global-value', 'global');
+    initRangeInput('w-gyro', 'w-gyro-value', 'gyro');
+    initRangeInput('w-scroll', 'w-scroll-value', 'scroll');
 }
 
 const gyroHandler = (e) => {
@@ -64,11 +82,13 @@ export function toggleGyro(btn) {
         GlobalState.dirty = true;
 
         btn.textContent = "📱 Motion: OFF";
+        btn.setAttribute('aria-pressed', 'false');
     } else {
         const enable = () => {
             window.addEventListener('deviceorientation', gyroHandler);
             GlobalState.gyro.active = true;
             btn.textContent = "📴 Motion: ON";
+            btn.setAttribute('aria-pressed', 'true');
         };
 
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
