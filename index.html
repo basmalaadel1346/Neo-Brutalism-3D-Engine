@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,12 +8,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body class="panel-hidden">
 
     <div class="app-layout">
-        
+
         <aside class="engine-panel" id="controls">
             <h3>Physics Engine Tuning</h3>
+            <button id="enable-motion" class="motion-btn">📱 تفعيل حساسات الحركة</button>
             <div class="control-group">
                 <label>Local Hover <span>(Mouse)</span></label>
                 <input type="range" id="w-local" min="0" max="30" value="15">
@@ -36,14 +39,15 @@
             <button class="btn" id="gyro-btn">📱 Motion: OFF</button>
             <button class="btn" id="theme-btn">🌙 Theme</button>
         </div>
-        
+
         <div id="fps-meter">FPS: 60 | Nodes: 0</div>
 
         <div class="card-grid" id="grid">
-            </div>
+        </div>
 
     </div>
 
     <script src="js/main.js" type="module" defer></script>
 </body>
+
 </html>
