@@ -42,7 +42,7 @@ export class RenderNode {
         this.el.addEventListener("mousemove", e => updateMousePos(e.clientX, e.clientY));
     }
 
-    update() {
+    update(deltaTime = 0.016) {
         const isSettled = Math.abs(this.velocity.rx) < 0.01 && Math.abs(this.velocity.ry) < 0.01;
         if (!this.dirty && isSettled && !this.globalState.dirty) return;
 
@@ -69,17 +69,20 @@ export class RenderNode {
         const targetScale = this.localMouse.active ? 1.03 : 1;
         const spring = 0.08, friction = 0.85;
 
-        this.velocity.rx += (tx - this.current.rx) * spring;
-        this.velocity.ry += (ty - this.current.ry) * spring;
-        this.velocity.sc += (targetScale - this.current.sc) * spring;
+        const timeScale = deltaTime * 60;
 
-        this.velocity.rx *= friction;
-        this.velocity.ry *= friction;
-        this.velocity.sc *= friction;
+        this.velocity.rx += (tx - this.current.rx) * spring * timeScale;
+        this.velocity.ry += (ty - this.current.ry) * spring * timeScale;
+        this.velocity.sc += (targetScale - this.current.sc) * spring * timeScale;
 
-        this.current.rx += this.velocity.rx;
-        this.current.ry += this.velocity.ry;
-        this.current.sc += this.velocity.sc;
+        const timeFriction = Math.pow(friction, timeScale);
+        this.velocity.rx *= timeFriction;
+        this.velocity.ry *= timeFriction;
+        this.velocity.sc *= timeFriction;
+
+        this.current.rx += this.velocity.rx * timeScale;
+        this.current.ry += this.velocity.ry * timeScale;
+        this.current.sc += this.velocity.sc * timeScale;
 
         this.el.style.setProperty('--rx', `${this.current.rx.toFixed(2)}deg`);
         this.el.style.setProperty('--ry', `${this.current.ry.toFixed(2)}deg`);
