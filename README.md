@@ -1,12 +1,20 @@
 <div align="center">
 
   <h3>💻 Desktop Experience</h3>
-  <video src="https://github.com/user-attachments/assets/e9f88788-1608-43a4-9ff5-bef9800416c0" width="700" autoplay loop muted playsinline></video>
+  <video src="
+
+https://github.com/user-attachments/assets/d3b7e53d-41bb-48ce-a257-7802cf16136f
+
+" width="700" autoplay loop muted playsinline></video>
 
   <br><br>
 
   <h3>📱 Mobile Experience</h3>
-  <video src="https://github.com/user-attachments/assets/ce7bbfb5-7c38-4c25-87a0-6c1ddaa7ea16" width="280" autoplay loop muted playsinline></video>
+  <video src="
+
+https://github.com/user-attachments/assets/8816c5bb-79bf-48f6-92ac-cf08fe69fb2c
+
+" width="280" autoplay loop muted playsinline></video>
 
 </div>
 <br>
