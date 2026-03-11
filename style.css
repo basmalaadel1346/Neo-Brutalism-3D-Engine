@@ -361,7 +361,6 @@ body.panel-hidden .engine-panel {
     cursor: not-allowed;
 }
 
-/* Responsive Images */
 .responsive-image {
     display: contents;
 }
@@ -381,7 +380,6 @@ body.panel-hidden .engine-panel {
     background-size: 20px 20px;
 }
 
-/* Improved accessibility: High contrast mode support */
 @media (prefers-contrast: more) {
     body {
         color: #000;
@@ -407,7 +405,6 @@ body.panel-hidden .engine-panel {
     }
 }
 
-/* Dark mode improvements */
 body.dark .btn,
 body.dark .motion-btn {
     background: #000;
@@ -436,4 +433,143 @@ body.dark .motion-btn:focus-visible {
         transform: none !important;
         transition: none !important;
     }
+}
+
+.skeleton {
+    background: #e0e0e0;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #000;
+    box-shadow: 5px 5px 0px #000;
+}
+
+.skeleton::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0.5) 50%,
+            rgba(255, 255, 255, 0) 100%);
+    animation: shimmer 1.5s infinite;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Enhanced skeleton placeholder for image area */
+.skeleton-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #e0e0e0;
+    animation: pulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Image container with skeleton support */
+.img-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 62.5%;
+    /* 800x500 aspect ratio */
+    overflow: hidden;
+    background: #e0e0e0;
+}
+
+.skeleton-img-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 62.5%;
+    overflow: hidden;
+    background: #e0e0e0;
+}
+
+/* Skeleton text styling with proper layout */
+.skeleton-text {
+    display: block;
+    background: #e0e0e0;
+    border-radius: 2px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.skeleton .skeleton-text {
+    background: linear-gradient(90deg,
+            #e0e0e0 0,
+            #f0f0f0 50%,
+            #e0e0e0 100%);
+    background-size: 200% 100%;
+    animation: shimmerText 1.5s infinite;
+}
+
+@keyframes shimmerText {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Card content wrapper for organized skeleton text */
+.card-content {
+    padding: 15px;
+}
+
+.skeleton-btn {
+    width: 40%;
+    height: 35px;
+}
+
+body.dark .skeleton {
+    background: #2a2a2a;
+    border-color: var(--yellow);
+}
+
+body.dark .skeleton::after {
+    background: linear-gradient(90deg,
+            rgba(0, 0, 0, 0) 0,
+            rgba(255, 255, 255, 0.05) 50%,
+            rgba(0, 0, 0, 0) 100%);
+}
+
+body.dark .skeleton-placeholder {
+    background: #2a2a2a;
+}
+
+body.dark .skeleton-img-container {
+    background: #2a2a2a;
+}
+
+body.dark .skeleton .skeleton-text {
+    background: linear-gradient(90deg,
+            #2a2a2a 0,
+            #3a3a3a 50%,
+            #2a2a2a 100%);
+    background-size: 200% 100%;
 }
