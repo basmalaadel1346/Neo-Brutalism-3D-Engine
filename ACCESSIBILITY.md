@@ -9,9 +9,11 @@ The project has been updated to meet **WCAG 2.1 Level AA** accessibility standar
 
 ### Document Structure
 ```html
+<!-- Proper language and meta tags -->
 <html lang="en">
 <meta name="description" content="...">
 
+<!-- Proper semantic landmarks -->
 <body role="application" aria-label="3D Card Gallery Engine">
     <aside role="complementary" aria-label="Physics Engine Controls">
     <main role="main" aria-label="Image Gallery">
@@ -30,8 +32,10 @@ The project has been updated to meet **WCAG 2.1 Level AA** accessibility standar
 
 ### Control Panel Enhancements
 ```html
+<!-- Before: No context for screen readers -->
 <input type="range" id="w-local" min="0" max="30" value="15">
 
+<!-- After: Complete accessibility information -->
 <label for="w-local">Local Hover <span>(Mouse)</span></label>
 <input type="range" id="w-local" min="0" max="30" value="15" 
        aria-label="Local hover effect weight"
@@ -137,6 +141,7 @@ else: 800px                    /* Desktop: fixed 800px */
 
 ```javascript
 const support = ImageOptimizer.checkFormatSupport();
+// Returns: { avif: true/false, webp: true/false, jpeg: true }
 ```
 
 ## Image Optimization Features
@@ -237,6 +242,7 @@ input.addEventListener('input', e => {
 
 ### Command Line Tools
 ```bash
+# Run accessibility audit (if configured)
 npm run audit:a11y
 ```
 
