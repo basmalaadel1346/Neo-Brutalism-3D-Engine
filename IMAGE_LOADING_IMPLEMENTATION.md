@@ -55,11 +55,8 @@ Card images support multiple image formats with graceful fallbacks:
 
 ```html
 <picture class="responsive-image">
-    <!-- AVIF: Modern, best compression -->
     <source type="image/avif" srcset="${avifUrl}" ...>
-    <!-- WebP: Good compression, broader support -->
     <source type="image/webp" srcset="${webpUrl}" ...>
-    <!-- JPEG: Universal fallback -->
     <source type="image/jpeg" srcset="${jpegUrl}" ...>
     <img src="${card.image}" ...>
 </picture>
@@ -132,22 +129,18 @@ Card images support multiple image formats with graceful fallbacks:
 #### onload Handler
 ```javascript
 img.onload = () => {
-    // Remove skeleton class from card
     cardElement.classList.remove('skeleton');
     
-    // Hide skeleton placeholder
     const skeletonPlaceholder = cardElement.querySelector('.skeleton-placeholder');
     if (skeletonPlaceholder) {
         skeletonPlaceholder.style.display = 'none';
     }
     
-    // Remove skeleton styling from text
     const textElements = cardElement.querySelectorAll('.skeleton-text');
     textElements.forEach(el => {
         el.classList.remove('skeleton-text');
     });
     
-    // Fade in the image
     img.style.opacity = '1';
 };
 ```
@@ -162,9 +155,7 @@ img.onload = () => {
 #### onerror Handler (Fallback)
 ```javascript
 img.onerror = () => {
-    // Same cleanup as onload
     cardElement.classList.remove('skeleton');
-    // ... additional cleanup
 };
 ```
 
@@ -178,18 +169,14 @@ img.onerror = () => {
 ```html
 <article class="card render-node skeleton">
     <a href="#" class="card-link">
-        <!-- Image with Skeleton Placeholder -->
         <div class="img-container skeleton-img-container">
             <picture class="responsive-image">
-                <!-- Format sources -->
                 <img class="main-img" loading="lazy" 
                      width="800" height="500" />
             </picture>
-            <!-- Skeleton overlay -->
             <div class="skeleton-placeholder"></div>
         </div>
 
-        <!-- Text Content with Skeleton Styling -->
         <div class="card-content">
             <span class="category skeleton-text">${badge}</span>
             <h2 class="title skeleton-text">${title}</h2>

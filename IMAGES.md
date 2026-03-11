@@ -42,7 +42,6 @@ The application uses a **progressive enhancement** approach to serve the best fo
 
 ```html
 <picture class="responsive-image">
-    <!-- Modern format: AVIF (smallest) -->
     <source type="image/avif" 
             srcset="image-400w.avif 400w, 
                     image-600w.avif 600w,
@@ -51,7 +50,6 @@ The application uses a **progressive enhancement** approach to serve the best fo
                    (max-width: 1200px) 50vw, 
                    800px">
 
-    <!-- Fallback: WebP (medium) -->
     <source type="image/webp"
             srcset="image-400w.webp 400w,
                     image-600w.webp 600w,
@@ -60,7 +58,6 @@ The application uses a **progressive enhancement** approach to serve the best fo
                    (max-width: 1200px) 50vw,
                    800px">
 
-    <!-- Final fallback: JPEG (largest) -->
     <source type="image/jpeg"
             srcset="image-400w.jpg 400w,
                     image-600w.jpg 600w,
@@ -69,7 +66,6 @@ The application uses a **progressive enhancement** approach to serve the best fo
                    (max-width: 1200px) 50vw,
                    800px">
 
-    <!-- Last resort: basic img tag -->
     <img src="image.jpg" 
          alt="Descriptive text"
          loading="lazy"
@@ -86,19 +82,13 @@ The application uses a **progressive enhancement** approach to serve the best fo
 Images are optimized for three main scenarios:
 
 ```css
-/* Mobile: Full viewport width */
 @media (max-width: 600px) {
-  /* Image uses 100vw - perfect for full-width cards */
 }
 
-/* Tablet: Half viewport width */
 @media (max-width: 1200px) {
-  /* Image uses 50vw - 2-column grid */
 }
 
-/* Desktop: Fixed width */
 @media (min-width: 1200px) {
-  /* Image uses 800px - 3+ column grid */
 }
 ```
 
@@ -121,10 +111,8 @@ export const cardsData = [
         title: "Mountain Sunset Glow",
         description: "...",
         
-        // Original image (still used as fallback)
         image: "https://images.unsplash.com/...?w=400&h=250&fit=crop",
         
-        // Format-specific URLs
         imageFormats: {
             avif: "https://images.unsplash.com/...?w=800&h=500&fit=crop&auto=format&q=75",
             webp: "https://images.unsplash.com/...?w=800&h=500&fit=crop&auto=format&q=75",
@@ -143,7 +131,6 @@ export const cardsData = [
 ```javascript
 import { ImageOptimizer } from './js/imageOptimizer.js';
 
-// Generate complete picture element
 const html = ImageOptimizer.generateResponsiveImage(
     'https://example.com/image',
     'Descriptive alt text',
@@ -174,15 +161,12 @@ console.log('✓ JPEG always supported');
 #### 3. Get Optimized URL
 
 ```javascript
-// Returns best format for current browser
 const url = ImageOptimizer.getOptimizedImageUrl('https://example.com/image');
-// Might return: 'https://example.com/image.avif'
 ```
 
 #### 4. Initialize All Images
 
 ```javascript
-// Setup error handling and log format support
 ImageOptimizer.initializeAllImages();
 ```
 
@@ -191,10 +175,8 @@ ImageOptimizer.initializeAllImages();
 ### Loading
 
 ```html
-<!-- Lazy loading: only fetch when near viewport -->
 <img loading="lazy" src="...">
 
-<!-- Eager: fetch immediately (default) -->
 <img loading="eager" src="...">
 ```
 
@@ -206,10 +188,8 @@ ImageOptimizer.initializeAllImages();
 ### Decoding
 
 ```html
-<!-- Async: non-blocking decode -->
 <img decoding="async" src="...">
 
-<!-- Synchronous: block rendering during decode -->
 <img decoding="sync" src="...">
 ```
 
@@ -221,7 +201,6 @@ ImageOptimizer.initializeAllImages();
 ### Dimensions
 
 ```html
-<!-- Explicit dimensions prevent layout shift -->
 <img width="800" height="500" src="...">
 ```
 
@@ -233,10 +212,8 @@ ImageOptimizer.initializeAllImages();
 ### Alt Text
 
 ```html
-<!-- Descriptive alt for accessibility and SEO -->
 <img alt="Mountain peaks at sunset with golden light" src="...">
 
-<!-- Generic alt for decorative images -->
 <img alt="" aria-hidden="true" src="...">
 ```
 
@@ -247,11 +224,10 @@ ImageOptimizer.initializeAllImages();
 The project uses Unsplash API for responsive images:
 
 ```javascript
-// URL parameters for optimization
-?w=800           // Width
-&h=500           // Height
-&fit=crop        // Crop to fit
-&auto=format     // Auto format detection
+?w=800           
+&h=500          
+&fit=crop        
+&auto=format     
 &q=75            // Quality (75% default)
 ```
 
@@ -285,7 +261,7 @@ The project uses Unsplash API for responsive images:
 
 ```css
 .responsive-image {
-    display: contents; /* Don't add extra DOM layer */
+    display: contents; 
 }
 
 .responsive-image img {
@@ -308,13 +284,11 @@ The project uses Unsplash API for responsive images:
 ```javascript
 const support = ImageOptimizer.checkFormatSupport();
 console.log('Browser capabilities:', support);
-// Output: { avif: true, webp: true }
 ```
 
 ### Error Handling Test
 
 ```javascript
-// Images with broken URLs fall back gracefully
 const img = new Image();
 img.dataset.fallback = '/images/placeholder.jpg';
 img.onerror = (e) => ImageOptimizer.handleImageError(e.target);
@@ -422,10 +396,8 @@ AVIF:  100 KB (44% smaller than JPEG)
 ### Unsplash URL Format
 
 ```javascript
-// Base URL
 const baseUrl = 'https://images.unsplash.com/photo-1495616811223-4d98c6e9c869';
 
-// Add parameters
 const width = 800;
 const height = 500;
 const quality = 75;
