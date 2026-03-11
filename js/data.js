@@ -45,7 +45,7 @@ export const cardsData = [
         badge: "Harvest",
         title: "Autumn Bounty",
         description: "Close-up of fresh, ripe produce harvested from local organic farms ready for market.",
-        image: "https://images.unsplash.com/photo-1603048297172-c92544798d5e?w=400&h=250&fit=crop"
+        image: "https://picsum.photos/600/400"
     },
     {
         badge: "Abstract",
