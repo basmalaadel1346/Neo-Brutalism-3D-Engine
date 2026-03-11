@@ -1,10 +1,17 @@
 
 
-https://github.com/user-attachments/assets/e9f88788-1608-43a4-9ff5-bef9800416c0
+<div align="center">
 
+  <h3>💻 Desktop Experience</h3>
+  <video src="https://github.com/user-attachments/assets/e9f88788-1608-43a4-9ff5-bef9800416c0" width="700"></video>
 
+  <br><br>
 
-https://github.com/user-attachments/assets/ce7bbfb5-7c38-4c25-87a0-6c1ddaa7ea16
+  <h3>📱 Mobile Experience</h3>
+  <video src="https://github.com/user-attachments/assets/ce7bbfb5-7c38-4c25-87a0-6c1ddaa7ea16" width="280"></video>
+
+</div>
+<br>
 
 # Neo-Brutalism 3D DOM Engine
 A highly optimized, dependency-free 3D interaction engine for the DOM. This project transforms a standard CSS Neo-Brutalism grid into a reactive, physics-driven environment using Vanilla JavaScript and advanced rendering techniques.
