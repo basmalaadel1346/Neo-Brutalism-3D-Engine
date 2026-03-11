@@ -22,6 +22,8 @@ A highly optimized, dependency-free 3D interaction engine for the DOM. This proj
 - Extreme Performance: Frustum Culling (IntersectionObserver), Idle Throttling, and minimal DOM updates.
 - Responsive & Accessible: Fully CSS Grid layout, mobile touch & gyroscope support.
 - HUD Panel: Real-time tuning for interaction weights.
+- Perceived Performance: Custom Skeleton screens with shimmer animations during image fetching to enhance UX.
+- Bulletproof Logic: 100% Unit Testing coverage for the physics engine and state management using Vitest.
 
 ## 🛠️ Tech Stack
 - HTML5 / CSS3: Grid, Variables, 3D Transforms, Animations.
