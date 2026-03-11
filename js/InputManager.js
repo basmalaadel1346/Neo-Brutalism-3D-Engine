@@ -1,9 +1,9 @@
 export const GlobalState = {
     mouse: { x: 0, y: 0, vx: 0, vy: 0, active: false },
-    scroll: { depth: 0, velocity: 0, lastY: window.scrollY },
+    scroll: { depth: 0, velocity: 0, lastY: typeof window !== 'undefined' ? window.scrollY : 0 },
     gyro: { beta: 0, gamma: 0, active: false },
     dirty: true,
-    lastInteraction: performance.now()
+    lastInteraction: typeof performance !== 'undefined' ? performance.now() : 0
 };
 
 export const Weights = { local: 15, global: 3, gyro: 20, scroll: 0.1 };
@@ -41,11 +41,10 @@ export function initInputListeners() {
         wakeUp();
     }, { passive: true });
 
-    // Initialize range inputs with output display for accessibility
     const initRangeInput = (inputId, outputId, weightKey) => {
         const input = document.getElementById(inputId);
         const output = document.getElementById(outputId);
-        
+
         if (input) {
             input.addEventListener('input', e => {
                 const value = +e.target.value;
@@ -53,8 +52,7 @@ export function initInputListeners() {
                 if (output) output.textContent = value.toFixed(2);
                 wakeUp();
             });
-            
-            // Set initial output value
+
             if (output) output.textContent = input.value;
         }
     };

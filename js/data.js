@@ -1,20 +1,9 @@
-/**
- * Card data with support for responsive images in multiple formats
- * Images support WebP, AVIF, and JPEG fallback formats
- * 
- * Image URL structure:
- * - Base URL with responsive width parameters
- * - Formats: jpg (fallback), webp, avif
- * - Common sizes: 400w, 600w, 800w, 1200w, 1600w
- */
-
 export const cardsData = [
     {
         badge: "Nature",
         title: "Mountain Sunset Glow",
         description: "Serene mountain peaks bathed in the warm, golden light of the setting sun.",
         image: "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=250&fit=crop",
-        // Optimized image formats with responsive sizes
         imageFormats: {
             avif: "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&h=500&fit=crop&auto=format&q=75",
             webp: "https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&h=500&fit=crop&auto=format&q=75",

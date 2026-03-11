@@ -1,9 +1,16 @@
 export class RenderNode {
-    static sharedObserver = new ResizeObserver(entries => {
-        entries.forEach(entry => {
-            if (entry.target._renderNode) entry.target._renderNode.updateRect();
-        });
-    });
+    static _sharedObserver = null;
+
+    static getSharedObserver() {
+        if (!this._sharedObserver) {
+            this._sharedObserver = new ResizeObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.target._renderNode) entry.target._renderNode.updateRect();
+                });
+            });
+        }
+        return this._sharedObserver;
+    }
 
     constructor(el, globalState, weights) {
         this.el = el;
@@ -18,7 +25,7 @@ export class RenderNode {
         this.dirty = true;
 
         this.el._renderNode = this;
-        RenderNode.sharedObserver.observe(this.el);
+        RenderNode.getSharedObserver().observe(this.el);
         this.initEvents();
     }
 
