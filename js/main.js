@@ -1,31 +1,51 @@
-import { cardsData } from './data.js';
-import { initInputListeners, toggleGyro } from './InputManager.js';
-import { initEngine } from './engine.js';
+/**
+ * main.js
+ * -------
+ * Application entry point.
+ *
+ * Architecture rules enforced here:
+ *  1. ALL DOM reads/writes and event bindings happen inside init().
+ *  2. init() is the ONLY entry point — no module-level side effects.
+ *  3. Image loading: progressive format fallback (AVIF → WebP → JPEG) is
+ *     handled inside ImageLoader, eliminating the need for imageOptimizer.js
+ *     (which has been deleted).
+ */
 
-const grid = document.getElementById("grid");
+import { cardsData }                          from './data.js';
+import { initInputListeners, toggleGyro }     from './InputManager.js';
+import { initEngine }                         from './engine.js';
 
-let shimmerObserver = null;
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const IMG_SIZES           = '(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px';
+const SHIMMER_STAGGER_MS  = 200;
+const SHIMMER_STAGGER_CYCLE = 4;
+
+// ---------------------------------------------------------------------------
+// Shimmer observer — pauses off-screen CSS animations to save GPU
+// ---------------------------------------------------------------------------
 
 function initShimmerObserver() {
-    shimmerObserver = new IntersectionObserver(
-        (entries) => {
-            entries.forEach(entry => {
-                entry.target.classList.toggle('shimmer-paused', !entry.isIntersecting);
-            });
-        },
+    const observer = new IntersectionObserver(
+        entries => entries.forEach(entry =>
+            entry.target.classList.toggle('shimmer-paused', !entry.isIntersecting)
+        ),
         { rootMargin: '50px', threshold: 0 }
     );
-    document.querySelectorAll('.skeleton-img-container, .skeleton-text').forEach(el => {
-        shimmerObserver.observe(el);
-    });
+    document.querySelectorAll('.skeleton-img-container, .skeleton-text')
+        .forEach(el => observer.observe(el));
 }
+
+// ---------------------------------------------------------------------------
+// will-change — applied on hover, cleaned up on transitionend
+// ---------------------------------------------------------------------------
 
 const willChangeCleanupMap = new WeakMap();
 
 function applyWillChange(el, properties) {
-    if (willChangeCleanupMap.has(el)) {
-        willChangeCleanupMap.get(el)();
-    }
+    if (willChangeCleanupMap.has(el)) willChangeCleanupMap.get(el)();
     el.style.willChange = properties;
     const cleanup = () => {
         el.style.willChange = 'auto';
@@ -36,91 +56,130 @@ function applyWillChange(el, properties) {
 }
 
 function initCardWillChange(card) {
-    card.addEventListener('pointerenter', () => {
-        applyWillChange(card, 'transform');
-    }, { passive: true });
+    card.addEventListener('pointerenter', () => applyWillChange(card, 'transform'), { passive: true });
 }
+
+// ---------------------------------------------------------------------------
+// ImageLoader — custom lazy loader with priority queue and format fallback
+// ---------------------------------------------------------------------------
 
 const ImageLoader = (() => {
     const state = {
-        loadingImages: new Set(),
-        loadedImages: new Set(),
-        scrollVelocity: 0,
-        lastScrollY: window.scrollY,
-        lastScrollTime: performance.now(),
-        mouseX: 0,
-        mouseY: 0,
-        preloadRadius: 600,
-        highPriorityQueue: [],
+        loadingImages:      new Set(),
+        loadedImages:       new Set(),
+        scrollVelocity:     0,
+        lastScrollY:        window.scrollY,
+        lastScrollTime:     performance.now(),
+        mouseX:             0,
+        mouseY:             0,
+        preloadRadius:      600,
+        highPriorityQueue:  [],
         normalPriorityQueue: [],
-        idleCallbackId: null,
-        pendingScrollRead: false,
-        cachedScrollY: window.scrollY
+        idleCallbackId:     null,
+        pendingScrollRead:  false,
     };
+
+    let shimmerObserverRef = null;
 
     const calculateScrollVelocity = () => {
         if (state.pendingScrollRead) return;
         state.pendingScrollRead = true;
         requestAnimationFrame(() => {
-            const now = performance.now();
+            const now          = performance.now();
             const currentScrollY = window.scrollY;
-            const timeDelta = now - state.lastScrollTime;
+            const timeDelta    = now - state.lastScrollTime;
             const distanceDelta = Math.abs(currentScrollY - state.lastScrollY);
             state.scrollVelocity = timeDelta > 0 ? distanceDelta / timeDelta : 0;
-            state.lastScrollY = currentScrollY;
-            state.cachedScrollY = currentScrollY;
+            state.lastScrollY    = currentScrollY;
             state.lastScrollTime = now;
             state.pendingScrollRead = false;
         });
     };
 
-    const getImagePriority = (rect, scrollVelocity) => {
-        const viewportHeight = window.innerHeight;
+    const getImagePriority = (rect) => {
+        const vh = window.innerHeight;
         const distanceToViewport = Math.max(
             0,
-            rect.top > viewportHeight ? rect.top - viewportHeight : Math.abs(rect.bottom)
+            rect.top > vh ? rect.top - vh : Math.abs(rect.bottom)
         );
         if (distanceToViewport < 200) return 'high';
-        if (distanceToViewport < 600 && scrollVelocity > 2) return 'high';
+        if (distanceToViewport < 600 && state.scrollVelocity > 2) return 'high';
         if (distanceToViewport < 1000) return 'normal';
         return 'low';
     };
 
-    const getMouseDistance = (rect) => {
-        const elemCenterX = rect.left + rect.width / 2;
-        const elemCenterY = rect.top + rect.height / 2;
-        return Math.hypot(state.mouseX - elemCenterX, state.mouseY - elemCenterY);
+    const getMouseDistance = rect => {
+        const cx = rect.left + rect.width  / 2;
+        const cy = rect.top  + rect.height / 2;
+        return Math.hypot(state.mouseX - cx, state.mouseY - cy);
     };
 
-    const loadImage = (img) => {
-        if (state.loadingImages.has(img) || state.loadedImages.has(img)) return;
-        state.loadingImages.add(img);
-        const dataSrc = img.dataset.src || img.closest('.img-container')?.querySelector('[data-src]')?.dataset.src;
-        if (!dataSrc) return;
-        const picture = img.closest('picture');
-        if (picture) {
-            picture.querySelectorAll('source').forEach(source => {
-                const dataSrcset = source.dataset.srcset;
-                if (dataSrcset) source.srcset = dataSrcset;
-            });
+    /**
+     * Progressive format fallback: tries the next format in the fallback chain
+     * if the previous attempt fails. Eliminates the need for imageOptimizer.js.
+     *
+     * @param {HTMLImageElement} img
+     * @param {string[]}         fallbackUrls - Ordered [preferred, …, last-resort]
+     * @param {number}           [attempt=0]
+     */
+    const loadImageWithFallback = (img, fallbackUrls, attempt = 0) => {
+        if (attempt >= fallbackUrls.length) {
+            // All formats exhausted — surface the broken state gracefully.
+            img.style.opacity = '1';
+            state.loadingImages.delete(img);
+            return;
         }
+
+        const url = fallbackUrls[attempt];
         const tempImg = new Image();
+
         tempImg.onload = () => {
-            img.src = dataSrc;
+            img.src = url;
             img.style.opacity = '1';
             state.loadingImages.delete(img);
             state.loadedImages.add(img);
+
             const container = img.closest('.img-container');
             if (container) {
                 container.classList.remove('skeleton-img-container');
-                shimmerObserver?.unobserve(container);
+                shimmerObserverRef?.unobserve(container);
             }
         };
+
         tempImg.onerror = () => {
-            state.loadingImages.delete(img);
-            img.style.opacity = '1';
+            // Try next format in chain
+            loadImageWithFallback(img, fallbackUrls, attempt + 1);
         };
-        tempImg.src = dataSrc;
+
+        tempImg.src = url;
+    };
+
+    const loadImage = img => {
+        if (state.loadingImages.has(img) || state.loadedImages.has(img)) return;
+        state.loadingImages.add(img);
+
+        // Build the format fallback chain from data attributes set during card creation.
+        // Order: AVIF → WebP → JPEG (most efficient to least).
+        const fallbackChain = [
+            img.dataset.srcAvif,
+            img.dataset.srcWebp,
+            img.dataset.src,      // JPEG / final fallback
+        ].filter(Boolean);
+
+        if (!fallbackChain.length) {
+            state.loadingImages.delete(img);
+            return;
+        }
+
+        // Also activate <source> elements for native <picture> negotiation.
+        const picture = img.closest('picture');
+        if (picture) {
+            picture.querySelectorAll('source').forEach(source => {
+                if (source.dataset.srcset) source.srcset = source.dataset.srcset;
+            });
+        }
+
+        loadImageWithFallback(img, fallbackChain);
     };
 
     const processQueue = () => {
@@ -142,53 +201,52 @@ const ImageLoader = (() => {
     };
 
     const scheduleImageLoad = (img, priority) => {
-        if (priority === 'high') {
-            if (!state.highPriorityQueue.includes(img)) state.highPriorityQueue.push(img);
-        } else {
-            if (!state.normalPriorityQueue.includes(img)) state.normalPriorityQueue.push(img);
-        }
+        const queue = priority === 'high' ? state.highPriorityQueue : state.normalPriorityQueue;
+        if (!queue.includes(img)) queue.push(img);
         processQueue();
     };
 
     const observeImages = () => {
-        const observer = new IntersectionObserver((entries) => {
-            const reads = entries.map(entry => ({
-                img: entry.target,
-                isIntersecting: entry.isIntersecting,
-                rect: entry.boundingClientRect
+        const observer = new IntersectionObserver(entries => {
+            const reads = entries.map(e => ({
+                img:            e.target,
+                isIntersecting: e.isIntersecting,
+                rect:           e.boundingClientRect,
             }));
             requestAnimationFrame(() => {
                 reads.forEach(({ img, isIntersecting, rect }) => {
                     if (!isIntersecting) return;
-                    const nearMouse = getMouseDistance(rect) < state.preloadRadius;
-                    const priority = getImagePriority(rect, state.scrollVelocity);
+                    const nearMouse    = getMouseDistance(rect) < state.preloadRadius;
+                    const priority     = getImagePriority(rect);
                     const finalPriority = (priority === 'high' || nearMouse) ? 'high' : 'normal';
                     scheduleImageLoad(img, finalPriority);
                 });
             });
         }, { rootMargin: '400px', threshold: 0 });
+
         document.querySelectorAll('.main-img[data-src]').forEach(img => observer.observe(img));
     };
 
     const loadViewportImages = () => {
-        const imgs = Array.from(document.querySelectorAll('.main-img[data-src]'));
-        const rects = imgs.map(img => img.getBoundingClientRect());
+        const imgs  = Array.from(document.querySelectorAll('.main-img[data-src]'));
+        const rects = imgs.map(img => img.getBoundingClientRect()); // batch read
         requestAnimationFrame(() => {
-            const viewportHeight = window.innerHeight;
+            const vh = window.innerHeight;
             imgs.forEach((img, i) => {
                 const rect = rects[i];
-                if (rect.top < viewportHeight && rect.bottom > 0) {
-                    scheduleImageLoad(img, 'high');
-                }
+                if (rect.top < vh && rect.bottom > 0) scheduleImageLoad(img, 'high');
             });
         });
     };
 
-    const init = () => {
-        document.addEventListener('mousemove', (e) => {
+    const init = (shimmerObserver) => {
+        shimmerObserverRef = shimmerObserver;
+
+        document.addEventListener('mousemove', e => {
             state.mouseX = e.clientX;
             state.mouseY = e.clientY;
         }, { passive: true });
+
         window.addEventListener('scroll', calculateScrollVelocity, { passive: true });
         loadViewportImages();
         observeImages();
@@ -197,62 +255,76 @@ const ImageLoader = (() => {
     return { init };
 })();
 
-const SHIMMER_STAGGER_MS = 200;
-const SHIMMER_STAGGER_CYCLE = 4;
-const IMG_SIZES = '(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px';
+// ---------------------------------------------------------------------------
+// Card DOM factory
+// ---------------------------------------------------------------------------
 
+/**
+ * Build the <picture> + <img> inside an .img-container.
+ * For the first card (LCP), load eagerly. All others use lazy + skeleton.
+ *
+ * @param {import('./data.js').CardData} card
+ * @param {boolean}                     isFirstCard
+ */
 function createImageContainer(card, isFirstCard) {
-    const imageFormats = card.imageFormats || {};
-    const avifUrl = imageFormats.avif || card.image;
-    const webpUrl = imageFormats.webp || card.image;
-    const jpegUrl = imageFormats.jpeg || card.image;
+    const { avif, webp, jpeg } = card.imageFormats;
 
     const container = document.createElement('div');
-    container.className = isFirstCard ? 'img-container' : 'img-container skeleton-img-container';
+    container.className  = isFirstCard
+        ? 'img-container'
+        : 'img-container skeleton-img-container';
     container.setAttribute('aria-hidden', 'true');
 
     const picture = document.createElement('picture');
     picture.className = 'responsive-image';
 
-    if (imageFormats.avif) {
+    // <source> elements — browser picks best supported format natively.
+    if (avif) {
         const src = document.createElement('source');
-        if (isFirstCard) src.srcset = avifUrl; else src.dataset.srcset = avifUrl;
-        src.type = 'image/avif';
+        src.type  = 'image/avif';
         src.sizes = IMG_SIZES;
+        if (isFirstCard) src.srcset = avif; else src.dataset.srcset = avif;
         picture.appendChild(src);
     }
 
-    if (imageFormats.webp) {
+    if (webp) {
         const src = document.createElement('source');
-        if (isFirstCard) src.srcset = webpUrl; else src.dataset.srcset = webpUrl;
-        src.type = 'image/webp';
+        src.type  = 'image/webp';
         src.sizes = IMG_SIZES;
+        if (isFirstCard) src.srcset = webp; else src.dataset.srcset = webp;
         picture.appendChild(src);
     }
 
     const jpegSrc = document.createElement('source');
-    jpegSrc.type = 'image/jpeg';
+    jpegSrc.type  = 'image/jpeg';
     jpegSrc.sizes = IMG_SIZES;
+    if (isFirstCard) jpegSrc.srcset = jpeg; else jpegSrc.dataset.srcset = jpeg;
     picture.appendChild(jpegSrc);
 
     const img = document.createElement('img');
     img.className = 'main-img';
-    img.alt = card.title;
-    img.width = 800;
-    img.height = 500;
-    img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.4s cubic-bezier(0.23,1,0.32,1);';
+    img.alt       = card.title;
+    img.width     = 800;
+    img.height    = 500;
+    // Inline style consolidated — avoids repeated CSSOM property updates
+    img.style.cssText =
+        'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;' +
+        'transition:opacity 0.4s cubic-bezier(0.23,1,0.32,1);';
 
     if (isFirstCard) {
-        img.src = jpegUrl;
+        img.src = jpeg;
         img.setAttribute('fetchpriority', 'high');
-        img.loading = 'eager';
-        img.decoding = 'sync';
+        img.loading     = 'eager';
+        img.decoding    = 'sync';
         img.style.opacity = '1';
     } else {
-        img.dataset.src = jpegUrl;
-        img.loading = 'lazy';
-        img.decoding = 'async';
-        img.style.opacity = '0';
+        // Store all format URLs as data attributes for the fallback chain.
+        if (avif) img.dataset.srcAvif = avif;
+        if (webp) img.dataset.srcWebp = webp;
+        img.dataset.src   = jpeg;
+        img.loading        = 'lazy';
+        img.decoding       = 'async';
+        img.style.opacity  = '0';
     }
 
     picture.appendChild(img);
@@ -268,13 +340,27 @@ function createImageContainer(card, isFirstCard) {
     return container;
 }
 
+/**
+ * Build a complete card <article> element.
+ *
+ * Accessibility fixes applied:
+ *  - aria-labelledby instead of aria-label (avoids duplicating visible text).
+ *  - <h2 id> used as the labelling element.
+ *  - Removed redundant tabindex="0" on <a> (natively focusable).
+ *  - Removed aria-label="Category" from badge <span>.
+ *  - href uses a semantic slug URL, not '#'.
+ *
+ * @param {import('./data.js').CardData} card
+ * @param {number}                       index
+ */
 function createCardElement(card, index) {
     const shimmerDelay = (index % SHIMMER_STAGGER_CYCLE) * SHIMMER_STAGGER_MS;
-    const isFirstCard = index === 0;
+    const isFirstCard  = index === 0;
+    const titleId      = `card-title-${index}`;
 
     const article = document.createElement('article');
     article.className = 'card render-node';
-    article.setAttribute('aria-label', card.title);
+    article.setAttribute('aria-labelledby', titleId);
     article.style.setProperty('--shimmer-delay', `${shimmerDelay}ms`);
 
     const pulse = document.createElement('div');
@@ -282,22 +368,22 @@ function createCardElement(card, index) {
     pulse.setAttribute('aria-hidden', 'true');
 
     const link = document.createElement('a');
-    link.href = '#';
+    link.href      = `/gallery/${card.id}`;  // semantic placeholder; replace with real route
     link.className = 'card-link';
-    link.setAttribute('tabindex', '0');
     link.setAttribute('rel', 'noopener noreferrer');
 
     const category = document.createElement('span');
-    category.className = 'category';
-    category.setAttribute('aria-label', 'Category');
+    category.className   = 'category';
     category.textContent = card.badge;
+    // No aria-label — the visible text IS the label.
 
     const title = document.createElement('h2');
+    title.id        = titleId;
     title.className = 'title';
     title.textContent = card.title;
 
     const description = document.createElement('p');
-    description.className = 'description';
+    description.className   = 'description';
     description.textContent = card.description;
 
     link.appendChild(createImageContainer(card, isFirstCard));
@@ -311,47 +397,98 @@ function createCardElement(card, index) {
     return article;
 }
 
-const fragment = document.createDocumentFragment();
-cardsData.forEach((c, index) => fragment.appendChild(createCardElement(c, index)));
-grid.appendChild(fragment);
+// ---------------------------------------------------------------------------
+// UI wiring helpers (pure functions — no side effects until called)
+// ---------------------------------------------------------------------------
 
-document.addEventListener('DOMContentLoaded', () => {
-    ImageLoader.init();
-    initInputListeners();
-    initEngine();
-    initShimmerObserver();
-    document.querySelectorAll('.card').forEach(card => initCardWillChange(card));
-});
+function wireTogglePanel() {
+    const panel         = document.getElementById('controls');
+    const togglePanelBtn = document.getElementById('toggle-panel');
+    if (!panel || !togglePanelBtn) return;
 
-const panel = document.getElementById('controls');
-const togglePanelBtn = document.getElementById('toggle-panel');
-
-togglePanelBtn.onclick = () => {
-    applyWillChange(panel, 'transform, opacity');
-    const isHidden = document.body.classList.toggle('panel-hidden');
-    togglePanelBtn.setAttribute('aria-pressed', String(!isHidden));
-};
-
-const gyroBtn = document.getElementById('gyro-btn');
-if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
-    if (gyroBtn) gyroBtn.style.display = 'none';
-}
-if (gyroBtn) {
-    gyroBtn.onclick = function () { toggleGyro(this); };
+    togglePanelBtn.addEventListener('click', () => {
+        applyWillChange(panel, 'transform, opacity');
+        const isHidden = document.body.classList.toggle('panel-hidden');
+        togglePanelBtn.setAttribute('aria-pressed', String(!isHidden));
+    });
 }
 
-document.getElementById('theme-btn').onclick = () => {
-    const toggleTheme = () => {
+function wireGyroBtnVisibility() {
+    const gyroBtn = document.getElementById('gyro-btn');
+    if (!gyroBtn) return;
+    // Hide HUD gyro button on non-touch desktop devices
+    if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
+        gyroBtn.style.display = 'none';
+    }
+    gyroBtn.addEventListener('click', toggleGyro);
+}
+
+function wireEnableMotionBtn() {
+    const btn = document.getElementById('enable-motion');
+    if (btn) btn.addEventListener('click', toggleGyro);
+}
+
+function wireThemeButton() {
+    const themeBtn = document.getElementById('theme-btn');
+    if (!themeBtn) return;
+
+    const applyTheme = () => {
         document.body.classList.toggle('dark');
+        // Re-trigger scroll handler so --bg-hue / --sh-color update immediately.
         window.dispatchEvent(new Event('scroll'));
     };
-    if ('startViewTransition' in document) {
-        try {
-            document.startViewTransition(toggleTheme);
-        } catch {
-            toggleTheme();
+
+    themeBtn.addEventListener('click', () => {
+        if ('startViewTransition' in document) {
+            try { document.startViewTransition(applyTheme); } catch { applyTheme(); }
+        } else {
+            applyTheme();
         }
-    } else {
-        toggleTheme();
-    }
-};
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Single deterministic entry point
+// ---------------------------------------------------------------------------
+
+function init() {
+    const grid = document.getElementById('grid');
+
+    // 1. Render all cards into the DOM in one DocumentFragment write.
+    const fragment = document.createDocumentFragment();
+    cardsData.forEach((card, i) => fragment.appendChild(createCardElement(card, i)));
+    grid.appendChild(fragment);
+
+    // 2. Initialise engine subsystems (after cards exist in the DOM).
+    initInputListeners();
+    initEngine();
+
+    const shimmerObserver = (() => {
+        const obs = new IntersectionObserver(
+            entries => entries.forEach(e =>
+                e.target.classList.toggle('shimmer-paused', !e.isIntersecting)
+            ),
+            { rootMargin: '50px', threshold: 0 }
+        );
+        document.querySelectorAll('.skeleton-img-container, .skeleton-text')
+            .forEach(el => obs.observe(el));
+        return obs;
+    })();
+
+    ImageLoader.init(shimmerObserver);
+
+    document.querySelectorAll('.card').forEach(initCardWillChange);
+
+    // 3. Wire all UI controls.
+    wireTogglePanel();
+    wireGyroBtnVisibility();
+    wireEnableMotionBtn();
+    wireThemeButton();
+}
+
+// Guard against edge cases where the module loads after DOMContentLoaded fires.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}

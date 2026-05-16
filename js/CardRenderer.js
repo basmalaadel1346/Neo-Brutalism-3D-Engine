@@ -1,4 +1,17 @@
+/**
+ * CardRenderer.js
+ * ---------------
+ * Manages the per-card spring physics simulation and DOM output.
+ *
+ * Consumes THREE input channels from GlobalState:
+ *   1. localMouse   — precise pointer position over this card
+ *   2. globalState.mouse — normalised viewport-wide cursor
+ *   3. globalState.gyro  — device orientation (single source, via InputManager)
+ *
+ * CSS custom properties written: --rx, --ry, --scale, --light-x, --light-y
+ */
 export class RenderNode {
+    /** Shared across all instances to avoid spawning N ResizeObservers. */
     static _sharedObserver = null;
 
     static getSharedObserver() {
@@ -12,74 +25,103 @@ export class RenderNode {
         return this._sharedObserver;
     }
 
+    /**
+     * @param {HTMLElement}        el
+     * @param {import('./InputManager.js').GlobalState} globalState
+     * @param {import('./InputManager.js').Weights}     weights
+     */
     constructor(el, globalState, weights) {
-        this.el = el;
+        this.el          = el;
         this.globalState = globalState;
-        this.weights = weights;
+        this.weights     = weights;
 
-        this.rect = null;
-        this.cx = 0; this.cy = 0;
+        this.rect      = null;
+        this.cx        = 0;
+        this.cy        = 0;
         this.localMouse = { x: 0, y: 0, active: false };
-        this.current = { rx: 0, ry: 0, sc: 1 };
-        this.velocity = { rx: 0, ry: 0, sc: 0 };
-        this.dirty = true;
+        this.current    = { rx: 0, ry: 0, sc: 1 };
+        this.velocity   = { rx: 0, ry: 0, sc: 0 };
+        this.dirty      = true;
 
+        // Back-reference used by ResizeObserver callback.
         this.el._renderNode = this;
         RenderNode.getSharedObserver().observe(this.el);
-        this.initEvents();
+        this._initEvents();
     }
 
     updateRect() {
         this.rect = this.el.getBoundingClientRect();
-        this.cx = this.rect.left + this.rect.width / 2;
-        this.cy = this.rect.top + this.rect.height / 2;
+        this.cx   = this.rect.left + this.rect.width  / 2;
+        this.cy   = this.rect.top  + this.rect.height / 2;
         this.dirty = true;
     }
 
-    initEvents() {
+    _initEvents() {
         const updateMousePos = (clientX, clientY) => {
             if (!this.rect) this.updateRect();
-            this.localMouse.x = ((clientX - this.rect.left) / this.rect.width) * 2 - 1;
-            this.localMouse.y = ((clientY - this.rect.top) / this.rect.height) * 2 - 1;
+            this.localMouse.x = ((clientX - this.rect.left) / this.rect.width)  * 2 - 1;
+            this.localMouse.y = ((clientY - this.rect.top)  / this.rect.height) * 2 - 1;
             this.dirty = true;
         };
 
-        this.el.addEventListener("mouseenter", () => { this.localMouse.active = true; this.dirty = true; });
-        this.el.addEventListener("mouseleave", () => { this.localMouse.active = false; this.dirty = true; });
-        this.el.addEventListener("mousemove", e => updateMousePos(e.clientX, e.clientY));
+        this.el.addEventListener('mouseenter', () => { this.localMouse.active = true;  this.dirty = true; });
+        this.el.addEventListener('mouseleave', () => { this.localMouse.active = false; this.dirty = true; });
+        // passive: true — we never call preventDefault here
+        this.el.addEventListener('mousemove', e => updateMousePos(e.clientX, e.clientY), { passive: true });
     }
 
+    /**
+     * Advance the spring simulation by one frame.
+     * @param {number} deltaTime - Seconds since last frame (capped externally).
+     */
     update(deltaTime = 0.016) {
         const isSettled = Math.abs(this.velocity.rx) < 0.01 && Math.abs(this.velocity.ry) < 0.01;
         if (!this.dirty && isSettled && !this.globalState.dirty) return;
 
+        // ------------------------------------------------------------------
+        // 1. Accumulate rotation targets from all active input channels
+        // ------------------------------------------------------------------
         let tx = 0, ty = 0;
 
         if (this.localMouse.active) {
+            // High-precision local hover — takes over from global mouse
             tx = -this.localMouse.y * this.weights.local;
-            ty = this.localMouse.x * this.weights.local;
+            ty =  this.localMouse.x * this.weights.local;
 
+            // Update specular light position (CSS only, no layout cost)
             const lx = (this.localMouse.x + 1) * 50;
             const ly = (this.localMouse.y + 1) * 50;
-            this.el.style.setProperty("--light-x", `${lx}%`);
-            this.el.style.setProperty("--light-y", `${ly}%`);
+            this.el.style.setProperty('--light-x', `${lx}%`);
+            this.el.style.setProperty('--light-y', `${ly}%`);
         } else if (this.globalState.mouse.active) {
             tx = -this.globalState.mouse.y * this.weights.global;
-            ty = this.globalState.mouse.x * this.weights.global;
+            ty =  this.globalState.mouse.x * this.weights.global;
         }
 
+        // Scroll-velocity impulse (additive, only while hovered)
         if (this.localMouse.active) {
             tx += this.globalState.mouse.vy * 0.02;
             ty += this.globalState.mouse.vx * 0.02;
         }
 
+        // Gyroscope (additive channel — works on mobile where mouse is inactive).
+        // beta  → forward/back device tilt → rotateX (--rx)
+        // gamma → left/right device tilt   → rotateY (--ry)
+        if (this.globalState.gyro.active) {
+            tx += -this.globalState.gyro.beta  * this.weights.gyro;
+            ty +=  this.globalState.gyro.gamma * this.weights.gyro;
+        }
+
+        // ------------------------------------------------------------------
+        // 2. Spring integration (frame-rate independent via timeScale)
+        // ------------------------------------------------------------------
         const targetScale = this.localMouse.active ? 1.03 : 1;
-        const spring = 0.08, friction = 0.85;
+        const spring      = 0.08;
+        const friction    = 0.85;
+        const timeScale   = deltaTime * 60;
 
-        const timeScale = deltaTime * 60;
-
-        this.velocity.rx += (tx - this.current.rx) * spring * timeScale;
-        this.velocity.ry += (ty - this.current.ry) * spring * timeScale;
+        this.velocity.rx += (tx          - this.current.rx) * spring * timeScale;
+        this.velocity.ry += (ty          - this.current.ry) * spring * timeScale;
         this.velocity.sc += (targetScale - this.current.sc) * spring * timeScale;
 
         const timeFriction = Math.pow(friction, timeScale);
@@ -91,6 +133,9 @@ export class RenderNode {
         this.current.ry += this.velocity.ry * timeScale;
         this.current.sc += this.velocity.sc * timeScale;
 
+        // ------------------------------------------------------------------
+        // 3. Write results — CSS custom properties batch-updated by browser
+        // ------------------------------------------------------------------
         this.el.style.setProperty('--rx', `${this.current.rx.toFixed(2)}deg`);
         this.el.style.setProperty('--ry', `${this.current.ry.toFixed(2)}deg`);
         this.el.style.setProperty('--scale', this.current.sc.toFixed(3));

@@ -43,9 +43,7 @@ body {
     margin: 0 auto;
 }
 
-body.panel-hidden .app-layout {
-    grid-template-columns: 0px 1fr;
-}
+/* .app-layout is display:block — grid-template-columns had no effect here. Removed. */
 
 .engine-panel {
     position: fixed;
@@ -168,6 +166,16 @@ body.panel-hidden .engine-panel {
     box-shadow: 4px 4px 0 var(--sh-color);
 }
 
+.page-title {
+    grid-column: 1 / -1;  /* span all grid columns */
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    color: var(--text-color);
+    text-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+}
+
 .card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -261,7 +269,9 @@ body.panel-hidden .engine-panel {
     position: relative;
 }
 
-.skeleton-img-container::after {
+/* Shared shimmer pseudo-element — single declaration covers both skeleton types (DRY fix). */
+.skeleton-img-container::after,
+.skeleton-text::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -340,20 +350,7 @@ body.panel-hidden .engine-panel {
     background: #ddd;
     border-radius: 4px;
     color: transparent;
-}
-
-.skeleton-text::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg,
-            transparent 0%,
-            rgba(255, 255, 255, 0.55) 50%,
-            transparent 100%);
-    transform: translate3d(-100%, 0, 0);
-    animation: shimmer var(--shimmer-duration) ease-in-out var(--shimmer-delay, 0ms) infinite;
-    will-change: transform;
-    pointer-events: none;
+    /* ::after is declared in the shared .skeleton-img-container::after, .skeleton-text::after rule above. */
 }
 
 .img-container:not(.skeleton-img-container) .skeleton-text {

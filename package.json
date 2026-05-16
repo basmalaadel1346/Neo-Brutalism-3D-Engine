@@ -9,19 +9,14 @@
         "test:watch": "vitest watch",
         "test:coverage": "vitest run --coverage"
     },
-    "keywords": [
-        "3D",
-        "physics",
-        "neo-brutalism",
-        "responsive"
-    ],
+    "keywords": ["3D", "physics", "neo-brutalism", "responsive"],
     "author": "",
     "license": "MIT",
     "devDependencies": {
         "@babel/preset-env": "^7.23.5",
         "@testing-library/dom": "^9.3.3",
-        "@vitest/ui": "^latest",
-        "vitest": "^latest",
-        "jsdom": "^latest"
+        "@vitest/ui": "^2.1.8",
+        "vitest": "^2.1.8",
+        "jsdom": "^25.0.1"
     }
 }

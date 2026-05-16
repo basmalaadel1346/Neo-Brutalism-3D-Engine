@@ -6,30 +6,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
         content="Neo-Brutalism 3D Engine - Interactive 3D physics simulation with responsive image gallery" />
+    <link rel="canonical" href="/" />
     <title>Ultimate Neo-Brutalism 3D Engine</title>
 
+    <!-- Open Graph -->
+    <meta property="og:title"       content="Ultimate Neo-Brutalism 3D Engine" />
+    <meta property="og:description" content="Interactive 3D physics simulation with a responsive image gallery." />
+    <meta property="og:type"        content="website" />
+
+    <!-- Security -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self';
         style-src 'self' https://fonts.googleapis.com;
-        img-src 'self' https: data:;
+        img-src 'self' https://images.unsplash.com https://picsum.photos data:;
         font-src https://fonts.gstatic.com;
         connect-src 'self' https://images.unsplash.com https://picsum.photos;
         base-uri 'self';
         form-action 'self';
         object-src 'none';
         frame-ancestors 'none';
+        upgrade-insecure-requests;
     ">
     <meta name="referrer" content="strict-origin-when-cross-origin">
 
+    <!-- Performance: font connections -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Non-blocking font load -->
+    <link rel="preload"
+          href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap"
+          as="style"
+          onload="this.rel='stylesheet'">
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap" rel="stylesheet">
+    </noscript>
+
+    <!-- LCP image preload (JPEG; matched to first card's eager img.src) -->
     <link rel="preload" as="image"
-          href="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=500&fit=crop&auto=format&q=60"
-          imagesrcset="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=500&fit=crop&auto=format&q=60"
+          href="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&h=500&fit=crop&fm=jpg&q=60"
+          imagesrcset="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=800&h=500&fit=crop&fm=jpg&q=60"
           imagesizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px"
           fetchpriority="high">
-    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -39,52 +59,76 @@
 
         <aside class="engine-panel" id="controls" role="complementary" aria-label="Physics Engine Controls">
             <h2>Physics Engine Tuning</h2>
+            <!--
+                #enable-motion: mobile-only; wired to the same toggleGyro() as #gyro-btn.
+                lang="ar" added so screen readers use the correct voice for Arabic text.
+            -->
             <button id="enable-motion" class="motion-btn"
-                aria-label="Enable device motion sensors for gyroscope control">📱 تفعيل حساسات الحركة</button>
+                aria-label="Enable device motion sensors for gyroscope control"
+                lang="ar">📱 تفعيل حساسات الحركة</button>
             <fieldset class="controls-group">
                 <legend>Control Weights</legend>
                 <div class="control-group">
                     <label for="w-local">Local Hover <span>(Mouse)</span></label>
-                    <input type="range" id="w-local" min="0" max="30" value="15" aria-valuemin="0" aria-valuemax="30"
+                    <input type="range" id="w-local" min="0" max="30" value="15"
+                        aria-valuemin="0" aria-valuemax="30"
                         aria-label="Local hover effect weight">
                     <output for="w-local" id="w-local-value">15</output>
                 </div>
                 <div class="control-group">
                     <label for="w-global">Global Gravity <span>(Env)</span></label>
-                    <input type="range" id="w-global" min="0" max="10" value="3" aria-valuemin="0" aria-valuemax="10"
+                    <input type="range" id="w-global" min="0" max="10" value="3"
+                        aria-valuemin="0" aria-valuemax="10"
                         aria-label="Global gravity effect weight">
                     <output for="w-global" id="w-global-value">3</output>
                 </div>
                 <div class="control-group">
                     <label for="w-gyro">Gyroscope <span>(Device)</span></label>
-                    <input type="range" id="w-gyro" min="0" max="40" value="20" aria-valuemin="0" aria-valuemax="40"
+                    <input type="range" id="w-gyro" min="0" max="40" value="20"
+                        aria-valuemin="0" aria-valuemax="40"
                         aria-label="Gyroscope device weight">
                     <output for="w-gyro" id="w-gyro-value">20</output>
                 </div>
                 <div class="control-group">
                     <label for="w-scroll">Scroll Velocity <span>(Pulse)</span></label>
-                    <input type="range" id="w-scroll" min="0" max="1" step="0.01" value="0.1" aria-valuemin="0"
-                        aria-valuemax="1" aria-label="Scroll velocity pulse weight">
+                    <input type="range" id="w-scroll" min="0" max="1" step="0.01" value="0.1"
+                        aria-valuemin="0" aria-valuemax="1"
+                        aria-label="Scroll velocity pulse weight">
                     <output for="w-scroll" id="w-scroll-value">0.1</output>
                 </div>
             </fieldset>
         </aside>
 
         <div class="hud-controls" role="toolbar" aria-label="Application controls">
-            <button class="btn" id="toggle-panel" aria-label="Toggle Physics Control Panel" aria-pressed="true">⚙️
-                Tuning</button>
-            <button class="btn" id="gyro-btn" aria-label="Toggle Device Motion Sensors">📱 Motion: OFF</button>
-            <button class="btn" id="theme-btn" aria-label="Switch between Dark and Light Mode">🌙 Theme</button>
+            <button class="btn" id="toggle-panel"
+                aria-label="Toggle Physics Control Panel"
+                aria-pressed="true">⚙️ Tuning</button>
+            <button class="btn" id="gyro-btn"
+                aria-label="Toggle Device Motion Sensors"
+                aria-pressed="false">📱 Motion: OFF</button>
+            <button class="btn" id="theme-btn"
+                aria-label="Switch between Dark and Light Mode">🌙 Theme</button>
         </div>
 
-        <div id="fps-meter" role="status" aria-label="Performance metrics" aria-live="polite">FPS: 60 | Nodes: 0</div>
+        <!--
+            aria-live="off": updating every second is disruptive to screen readers.
+            The meter is a developer/power-user tool, not a primary content element.
+        -->
+        <div id="fps-meter" role="status" aria-label="Performance metrics" aria-live="off">FPS: 60 | Nodes: 0</div>
 
-        <main class="card-grid" id="grid" role="main" aria-label="Image Gallery">
+        <main class="card-grid" id="grid">
+            <!--
+                h1 is rendered here by JS (inside each card is h2).
+                The page-level h1 is declared statically for SEO crawlers and
+                screen readers before JS executes.
+            -->
+            <h1 class="page-title">Neo-Brutalism 3D Gallery</h1>
         </main>
 
     </div>
 
-    <script src="js/imageOptimizer.js" type="module" defer></script>
+    <!-- imageOptimizer.js removed — it was a dead module. Format fallback is
+         handled inside main.js ImageLoader.loadImageWithFallback(). -->
     <script src="js/main.js" type="module" defer></script>
 </body>
 
