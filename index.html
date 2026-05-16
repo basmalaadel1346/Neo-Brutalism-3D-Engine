@@ -11,24 +11,25 @@
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self';
-        style-src 'self' https://fonts.googleapis.com;
-        img-src 'self' https: data:;
-        font-src https://fonts.gstatic.com;
-        connect-src 'self' https://images.unsplash.com https://picsum.photos;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        img-src 'self' data: https://res.cloudinary.com https://images.unsplash.com https://picsum.photos;
+        font-src 'self' https://fonts.gstatic.com;
+        connect-src 'self' https://res.cloudinary.com;
         base-uri 'self';
         form-action 'self';
         object-src 'none';
-        frame-ancestors 'none';
     ">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
     <link rel="preload" as="image"
-          href="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=500&fit=crop&auto=format&q=60"
-          imagesrcset="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=500&fit=crop&auto=format&q=60"
-          imagesizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px"
-          fetchpriority="high">
+      href="https://res.cloudinary.com/dyddv1d3z/image/upload/w_400,h_500,c_fill,f_auto,q_auto/main-sample.png"
+      imagesrcset="https://res.cloudinary.com/dyddv1d3z/image/upload/w_400,h_500,c_fill,f_auto,q_auto/main-sample.png"
+      imagesizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px"
+      fetchpriority="high">
+          
     <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
