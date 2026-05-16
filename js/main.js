@@ -15,7 +15,6 @@ function initShimmerObserver() {
         },
         { rootMargin: '50px', threshold: 0 }
     );
-
     document.querySelectorAll('.skeleton-img-container, .skeleton-text').forEach(el => {
         shimmerObserver.observe(el);
     });
@@ -27,14 +26,11 @@ function applyWillChange(el, properties) {
     if (willChangeCleanupMap.has(el)) {
         willChangeCleanupMap.get(el)();
     }
-
     el.style.willChange = properties;
-
     const cleanup = () => {
         el.style.willChange = 'auto';
         willChangeCleanupMap.delete(el);
     };
-
     el.addEventListener('transitionend', cleanup, { once: true });
     willChangeCleanupMap.set(el, cleanup);
 }
@@ -65,7 +61,6 @@ const ImageLoader = (() => {
     const calculateScrollVelocity = () => {
         if (state.pendingScrollRead) return;
         state.pendingScrollRead = true;
-
         requestAnimationFrame(() => {
             const now = performance.now();
             const currentScrollY = window.scrollY;
@@ -99,12 +94,9 @@ const ImageLoader = (() => {
 
     const loadImage = (img) => {
         if (state.loadingImages.has(img) || state.loadedImages.has(img)) return;
-
         state.loadingImages.add(img);
         const dataSrc = img.dataset.src || img.closest('.img-container')?.querySelector('[data-src]')?.dataset.src;
-
         if (!dataSrc) return;
-
         const picture = img.closest('picture');
         if (picture) {
             picture.querySelectorAll('source').forEach(source => {
@@ -112,45 +104,36 @@ const ImageLoader = (() => {
                 if (dataSrcset) source.srcset = dataSrcset;
             });
         }
-
         const tempImg = new Image();
         tempImg.onload = () => {
             img.src = dataSrc;
             img.style.opacity = '1';
             state.loadingImages.delete(img);
             state.loadedImages.add(img);
-
             const container = img.closest('.img-container');
             if (container) {
                 container.classList.remove('skeleton-img-container');
                 shimmerObserver?.unobserve(container);
             }
         };
-
         tempImg.onerror = () => {
             state.loadingImages.delete(img);
             img.style.opacity = '1';
         };
-
         tempImg.src = dataSrc;
     };
 
     const processQueue = () => {
         if (state.highPriorityQueue.length > 0) {
-            const img = state.highPriorityQueue.shift();
-            loadImage(img);
+            loadImage(state.highPriorityQueue.shift());
         }
-
         if (state.normalPriorityQueue.length > 0 && state.loadingImages.size < 3) {
-            const img = state.normalPriorityQueue.shift();
-            loadImage(img);
+            loadImage(state.normalPriorityQueue.shift());
         }
-
         state.idleCallbackId = requestIdleCallback(
             () => {
                 if (state.normalPriorityQueue.length > 0) {
-                    const img = state.normalPriorityQueue.shift();
-                    loadImage(img);
+                    loadImage(state.normalPriorityQueue.shift());
                     processQueue();
                 }
             },
@@ -174,7 +157,6 @@ const ImageLoader = (() => {
                 isIntersecting: entry.isIntersecting,
                 rect: entry.boundingClientRect
             }));
-
             requestAnimationFrame(() => {
                 reads.forEach(({ img, isIntersecting, rect }) => {
                     if (!isIntersecting) return;
@@ -185,15 +167,12 @@ const ImageLoader = (() => {
                 });
             });
         }, { rootMargin: '400px', threshold: 0 });
-
         document.querySelectorAll('.main-img[data-src]').forEach(img => observer.observe(img));
     };
 
     const loadViewportImages = () => {
         const imgs = Array.from(document.querySelectorAll('.main-img[data-src]'));
-
         const rects = imgs.map(img => img.getBoundingClientRect());
-
         requestAnimationFrame(() => {
             const viewportHeight = window.innerHeight;
             imgs.forEach((img, i) => {
@@ -218,71 +197,129 @@ const ImageLoader = (() => {
     return { init };
 })();
 
-function generateResponsiveImageHTML(card, isFirstCard) {
+const SHIMMER_STAGGER_MS = 200;
+const SHIMMER_STAGGER_CYCLE = 4;
+const IMG_SIZES = '(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px';
+
+function createImageContainer(card, isFirstCard) {
     const imageFormats = card.imageFormats || {};
     const avifUrl = imageFormats.avif || card.image;
     const webpUrl = imageFormats.webp || card.image;
     const jpegUrl = imageFormats.jpeg || card.image;
 
-    const srcAttr = isFirstCard ? 'src' : 'data-src';
-    const srcsetAttr = isFirstCard ? 'srcset' : 'data-srcset';
-    const fetchPriority = isFirstCard ? 'fetchpriority="high"' : '';
-    const loading = isFirstCard ? 'loading="eager"' : 'loading="lazy"';
-    const decoding = isFirstCard ? 'decoding="sync"' : 'decoding="async"';
-    const opacity = isFirstCard ? '1' : '0';
-    const skeletonClass = isFirstCard ? '' : 'skeleton-img-container';
+    const container = document.createElement('div');
+    container.className = isFirstCard ? 'img-container' : 'img-container skeleton-img-container';
+    container.setAttribute('aria-hidden', 'true');
 
-    const sizes = "(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px";
+    const picture = document.createElement('picture');
+    picture.className = 'responsive-image';
 
-    return `
-        <div class="img-container ${skeletonClass}" aria-hidden="true">
-            <picture class="responsive-image">
-                ${imageFormats.avif ? `<source ${srcsetAttr}="${avifUrl}" type="image/avif" sizes="${sizes}">` : ''}
-                ${imageFormats.webp ? `<source ${srcsetAttr}="${webpUrl}" type="image/webp" sizes="${sizes}">` : ''}
-                <source type="image/jpeg" sizes="${sizes}">
-                <img
-                    class="main-img"
-                    alt="${card.title}"
-                    ${srcAttr}="${jpegUrl}"
-                    ${loading}
-                    ${fetchPriority}
-                    width="800"
-                    height="500"
-                    ${decoding}
-                    style="opacity: ${opacity}; transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1); position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;"
-                >
-            </picture>
-            ${isFirstCard ? '' : '<div class="skeleton-placeholder" aria-hidden="true"></div>'}
-        </div>
-    `;
+    if (imageFormats.avif) {
+        const src = document.createElement('source');
+        if (isFirstCard) src.srcset = avifUrl; else src.dataset.srcset = avifUrl;
+        src.type = 'image/avif';
+        src.sizes = IMG_SIZES;
+        picture.appendChild(src);
+    }
+
+    if (imageFormats.webp) {
+        const src = document.createElement('source');
+        if (isFirstCard) src.srcset = webpUrl; else src.dataset.srcset = webpUrl;
+        src.type = 'image/webp';
+        src.sizes = IMG_SIZES;
+        picture.appendChild(src);
+    }
+
+    const jpegSrc = document.createElement('source');
+    jpegSrc.type = 'image/jpeg';
+    jpegSrc.sizes = IMG_SIZES;
+    picture.appendChild(jpegSrc);
+
+    const img = document.createElement('img');
+    img.className = 'main-img';
+    img.alt = card.title;
+    img.width = 800;
+    img.height = 500;
+    img.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.4s cubic-bezier(0.23,1,0.32,1);';
+
+    if (isFirstCard) {
+        img.src = jpegUrl;
+        img.setAttribute('fetchpriority', 'high');
+        img.loading = 'eager';
+        img.decoding = 'sync';
+        img.style.opacity = '1';
+    } else {
+        img.dataset.src = jpegUrl;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.style.opacity = '0';
+    }
+
+    picture.appendChild(img);
+    container.appendChild(picture);
+
+    if (!isFirstCard) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'skeleton-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        container.appendChild(placeholder);
+    }
+
+    return container;
 }
 
-const SHIMMER_STAGGER_MS = 200;
-const SHIMMER_STAGGER_CYCLE = 4;
-
-grid.innerHTML = cardsData.map((c, index) => {
+function createCardElement(card, index) {
     const shimmerDelay = (index % SHIMMER_STAGGER_CYCLE) * SHIMMER_STAGGER_MS;
+    const isFirstCard = index === 0;
 
-    return `
-<article class="card render-node"
-         aria-label="${c.title}"
-         style="--shimmer-delay: ${shimmerDelay}ms">
-    <div class="card-pulse" aria-hidden="true"></div>
-    <a href="#" class="card-link" tabindex="0">
-        ${generateResponsiveImageHTML(c, index === 0)}
-        <span class="category" aria-label="Category">${c.badge}</span>
-        <h2 class="title">${c.title}</h2>
-        <p class="description">${c.description}</p>
-    </a>
-</article>`;
-}).join('');
+    const article = document.createElement('article');
+    article.className = 'card render-node';
+    article.setAttribute('aria-label', card.title);
+    article.style.setProperty('--shimmer-delay', `${shimmerDelay}ms`);
+
+    const pulse = document.createElement('div');
+    pulse.className = 'card-pulse';
+    pulse.setAttribute('aria-hidden', 'true');
+
+    const link = document.createElement('a');
+    link.href = '#';
+    link.className = 'card-link';
+    link.setAttribute('tabindex', '0');
+    link.setAttribute('rel', 'noopener noreferrer');
+
+    const category = document.createElement('span');
+    category.className = 'category';
+    category.setAttribute('aria-label', 'Category');
+    category.textContent = card.badge;
+
+    const title = document.createElement('h2');
+    title.className = 'title';
+    title.textContent = card.title;
+
+    const description = document.createElement('p');
+    description.className = 'description';
+    description.textContent = card.description;
+
+    link.appendChild(createImageContainer(card, isFirstCard));
+    link.appendChild(category);
+    link.appendChild(title);
+    link.appendChild(description);
+
+    article.appendChild(pulse);
+    article.appendChild(link);
+
+    return article;
+}
+
+const fragment = document.createDocumentFragment();
+cardsData.forEach((c, index) => fragment.appendChild(createCardElement(c, index)));
+grid.appendChild(fragment);
 
 document.addEventListener('DOMContentLoaded', () => {
     ImageLoader.init();
     initInputListeners();
     initEngine();
     initShimmerObserver();
-
     document.querySelectorAll('.card').forEach(card => initCardWillChange(card));
 });
 
@@ -296,7 +333,6 @@ togglePanelBtn.onclick = () => {
 };
 
 const gyroBtn = document.getElementById('gyro-btn');
-
 if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
     if (gyroBtn) gyroBtn.style.display = 'none';
 }
@@ -309,7 +345,6 @@ document.getElementById('theme-btn').onclick = () => {
         document.body.classList.toggle('dark');
         window.dispatchEvent(new Event('scroll'));
     };
-
     if ('startViewTransition' in document) {
         try {
             document.startViewTransition(toggleTheme);
