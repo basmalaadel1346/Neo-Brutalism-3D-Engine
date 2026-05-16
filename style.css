@@ -10,7 +10,7 @@
     --page-bg: hsl(var(--bg-hue), 90%, 63%);
     --card-bg: var(--white);
     --text-color: var(--black);
-    --ease-apple: cubic-bezier(0.23, 1, 0.32, 1);
+    --shimmer-duration: 1.6s;
 }
 
 body.dark {
@@ -20,7 +20,7 @@ body.dark {
     --border-color: #000;
 }
 
-* {
+*, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -31,10 +31,7 @@ body {
     background: var(--page-bg);
     color: var(--text-color);
     min-height: 200vh;
-    margin: 0;
-    padding: 0;
     overflow-x: hidden;
-    transition: background 0.15s ease-out;
 }
 
 .app-layout {
@@ -55,14 +52,14 @@ body.panel-hidden .app-layout {
     width: 300px;
     height: fit-content;
     background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
     border: 4px solid #000;
     padding: 20px;
     border-radius: 16px;
     box-shadow: 8px 8px 0 0 #000;
     z-index: 3000;
     color: var(--black);
-    transition: opacity 0.3s ease, transform 0.3s var(--ease-apple);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
 }
 
 body.panel-hidden .engine-panel {
@@ -71,15 +68,7 @@ body.panel-hidden .engine-panel {
     pointer-events: none;
 }
 
-
-.engine-panel h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    font-weight: 800;
-    border-bottom: 3px solid #000;
-    padding-bottom: 8px;
-}
-
+.engine-panel h3,
 .engine-panel h2 {
     font-size: 18px;
     margin-bottom: 15px;
@@ -145,7 +134,7 @@ body.panel-hidden .engine-panel {
     background: var(--white);
     color: var(--black);
     box-shadow: 4px 4px 0 0 #000;
-    transition: all 0.1s;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .btn:active {
@@ -199,30 +188,39 @@ body.panel-hidden .engine-panel {
     --light-y: 50%;
 
     transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) scale3d(var(--scale), var(--scale), 1);
-    box-shadow: 8px 8px var(--pulse-spread) 0 var(--sh-color);
     transform-style: preserve-3d;
-    will-change: transform;
+    box-shadow: 8px 8px var(--pulse-spread) 0 var(--sh-color);
 }
 
 .card::before {
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at var(--light-x) var(--light-y), rgba(255, 255, 255, 0.4), transparent 60%);
+    background: radial-gradient(
+        circle at var(--light-x) var(--light-y),
+        rgba(255, 255, 255, 0.35),
+        transparent 60%
+    );
     pointer-events: none;
     border-radius: 17px;
     z-index: 15;
-    mix-blend-mode: overlay;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.card:hover::before {
+    opacity: 1;
 }
 
 .card::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, var(--fog-opacity));
+    background: rgba(0, 0, 0, 0.15);
     border-radius: 17px;
     pointer-events: none;
-    transition: background 0.1s linear;
+    opacity: 0;
+    transition: opacity 0.1s linear;
     z-index: 10;
 }
 
@@ -237,7 +235,6 @@ body.panel-hidden .engine-panel {
     overflow: hidden;
     transform: translateZ(30px);
     transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-    will-change: transform;
 }
 
 .card:hover .img-container {
@@ -245,38 +242,31 @@ body.panel-hidden .engine-panel {
 }
 
 .skeleton-img-container {
-    background: linear-gradient(90deg, #e0e0e0 0%, #f0f0f0 50%, #e0e0e0 100%);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
+    background: #e0e0e0;
+    overflow: hidden;
+    position: relative;
 }
 
 .skeleton-img-container::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: shimmerShine 1.5s infinite;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 100%
+    );
+    transform: translate3d(-100%, 0, 0);
+    animation: shimmer var(--shimmer-duration) ease-in-out infinite;
+    will-change: transform;
     pointer-events: none;
+    border-radius: inherit;
 }
 
 @keyframes shimmer {
-    0% {
-        background-position: -200% 0;
-    }
-
-    100% {
-        background-position: 200% 0;
-    }
-}
-
-@keyframes shimmerShine {
-    0% {
-        transform: translateX(-100%);
-    }
-
-    100% {
-        transform: translateX(100%);
-    }
+    0%   { transform: translate3d(-100%, 0, 0); }
+    100% { transform: translate3d(200%, 0, 0); }
 }
 
 .skeleton-placeholder {
@@ -297,7 +287,7 @@ body.panel-hidden .engine-panel {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    will-change: opacity;
+    display: block;
     backface-visibility: hidden;
 }
 
@@ -318,11 +308,6 @@ body.panel-hidden .engine-panel {
     outline-offset: 2px;
 }
 
-.card-link:hover,
-.card-link:focus-within {
-    outline-offset: 2px;
-}
-
 .card-content {
     display: flex;
     flex-direction: column;
@@ -330,29 +315,46 @@ body.panel-hidden .engine-panel {
 }
 
 .skeleton-text {
-    background: linear-gradient(90deg, #ddd 0%, #eee 50%, #ddd 100%);
-    background-size: 200% 100%;
-    animation: textShimmer 1.5s infinite;
+    position: relative;
+    overflow: hidden;
+    background: #ddd;
     border-radius: 4px;
+    color: transparent;
+}
+
+.skeleton-text::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 100%
+    );
+    transform: translate3d(-100%, 0, 0);
+    animation: shimmer var(--shimmer-duration) ease-in-out infinite;
+    will-change: transform;
+    pointer-events: none;
 }
 
 .img-container:not(.skeleton-img-container) .skeleton-text {
     animation: none;
     background: none;
-}
-
-@keyframes textShimmer {
-    0% {
-        background-position: -200% 0;
-    }
-
-    100% {
-        background-position: 200% 0;
-    }
+    color: inherit;
 }
 
 body.dark .skeleton-text {
-    background: linear-gradient(90deg, #333 0%, #444 50%, #333 100%);
+    background: #333;
+}
+
+body.dark .skeleton-text::after {
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        transparent 100%
+    );
 }
 
 .category {
@@ -383,6 +385,64 @@ body.dark .skeleton-text {
 
 .card:hover .description {
     transform: translateZ(40px);
+}
+
+.motion-btn {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: var(--yellow);
+    color: var(--black);
+    border: 3px solid var(--black);
+    border-radius: 0;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 4px 4px 0px var(--black);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.motion-btn:focus-visible {
+    outline: 3px solid #000;
+    outline-offset: 2px;
+}
+
+.motion-btn:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px var(--black);
+}
+
+.motion-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.motion-btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0px 0px 0px var(--black);
+}
+
+.responsive-image {
+    display: contents;
+}
+
+.responsive-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+body.dark .btn,
+body.dark .motion-btn {
+    background: #000;
+    color: var(--yellow);
+    border-color: var(--yellow);
+}
+
+body.dark .btn:focus-visible,
+body.dark .motion-btn:focus-visible {
+    outline-color: var(--yellow);
 }
 
 @media (max-width: 900px) {
@@ -416,59 +476,14 @@ body.dark .skeleton-text {
     }
 }
 
-.motion-btn {
-    width: 100%;
-    margin-bottom: 15px;
-    padding: 10px;
-    background-color: var(--yellow);
-    color: var(--black);
-    border: 3px solid var(--black);
-    border-radius: 0;
-    font-weight: bold;
-    font-family: inherit;
-    cursor: pointer;
-    box-shadow: 4px 4px 0px var(--black);
-    transition: all 0.2s ease;
-}
-
-.motion-btn:focus-visible {
-    outline: 3px solid #000;
-    outline-offset: 2px;
-}
-
-.motion-btn:hover:not(:disabled) {
-    transform: translate(-2px, -2px);
-    box-shadow: 6px 6px 0px var(--black);
-}
-
-.motion-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.responsive-image {
-    display: contents;
-}
-
-.responsive-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.main-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    background: linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc);
-    background-size: 20px 20px;
+@media (hover: hover) and (pointer: fine) {
+    .motion-btn {
+        display: none !important;
+    }
 }
 
 @media (prefers-contrast: more) {
-    body {
-        color: #000;
-    }
+    body { color: #000; }
 
     .btn,
     .motion-btn {
@@ -476,45 +491,26 @@ body.dark .skeleton-text {
         box-shadow: 6px 6px 0 0 #000;
     }
 
-    .card {
-        border-width: 4px;
-    }
+    .card { border-width: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    .skeleton-img-container::after,
+    .skeleton-text::after {
+        animation: none;
+        transform: translate3d(0%, 0, 0);
+        opacity: 0.4;
     }
-}
 
-body.dark .btn,
-body.dark .motion-btn {
-    background: #000;
-    color: var(--yellow);
-    border-color: var(--yellow);
-}
-
-body.dark .btn:focus-visible,
-body.dark .motion-btn:focus-visible {
-    outline-color: var(--yellow);
-}
-
-.motion-btn:active {
-    transform: translate(4px, 4px);
-    box-shadow: 0px 0px 0px var(--black);
-}
-
-@media (hover: hover) and (pointer: fine) {
-    .motion-btn {
-        display: none !important;
+    .card,
+    .img-container,
+    .title,
+    .description,
+    .card::before {
+        transition: none;
     }
-}
 
-@media (prefers-reduced-motion: reduce) {
-    .card {
-        transform: none !important;
-        transition: none !important;
+    .skeleton-placeholder {
+        transition: opacity 0.2s ease;
     }
 }
