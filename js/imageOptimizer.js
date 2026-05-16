@@ -8,14 +8,18 @@ export class ImageOptimizer {
      */
     static generateResponsiveImage(baseUrl, altText, options = {}) {
         const {
-            sizes = '(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 800px',
+            // تم تقليل الحجم الافتراضي لـ 400px ليتناسب مع حجم الـ Card يوفر استهلاك البيانات
+            sizes = '(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px',
             className = 'responsive-image',
-            loading = 'lazy'
+            loading = 'lazy',
+            fetchpriority = 'auto' // تمت إضافة هذه الخاصية لدعم أول صورة (LCP)
         } = options;
 
         const srcsetWebP = this.generateSrcSet(baseUrl, 'webp');
         const srcsetAvif = this.generateSrcSet(baseUrl, 'avif');
         const srcsetJpeg = this.generateSrcSet(baseUrl, 'jpg');
+
+        const decoding = loading === 'lazy' ? 'async' : 'auto';
 
         return `
       <picture class="${className}">
@@ -26,8 +30,9 @@ export class ImageOptimizer {
           src="${baseUrl}.jpg" 
           alt="${altText}" 
           loading="${loading}"
+          ${fetchpriority !== 'auto' ? `fetchpriority="${fetchpriority}"` : ''}
           sizes="${sizes}"
-          decoding="async"
+          decoding="${decoding}"
           width="800"
           height="500"
         >

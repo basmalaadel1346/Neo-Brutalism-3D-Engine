@@ -175,37 +175,51 @@ const ImageLoader = (() => {
     return { init };
 })();
 
-function generateResponsiveImageHTML(card) {
+function generateResponsiveImageHTML(card, isFirstCard) {
     const imageFormats = card.imageFormats || {};
     const avifUrl = imageFormats.avif || card.image;
     const webpUrl = imageFormats.webp || card.image;
     const jpegUrl = imageFormats.jpeg || card.image;
 
+    // تحديد الخصائص بناءً على إذا كانت هذه هي الصورة الأولى أم لا
+    const srcAttr = isFirstCard ? 'src' : 'data-src';
+    const srcsetAttr = isFirstCard ? 'srcset' : 'data-srcset';
+    const fetchPriority = isFirstCard ? 'fetchpriority="high"' : '';
+    const loading = isFirstCard ? 'loading="eager"' : 'loading="lazy"';
+    const decoding = isFirstCard ? 'decoding="auto"' : 'decoding="async"';
+    const opacity = isFirstCard ? '1' : '0';
+    const skeletonClass = isFirstCard ? '' : 'skeleton-img-container';
+    
+    const sizes = "(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px";
+
     return `
-        <div class="img-container skeleton-img-container" aria-hidden="true">
+        <div class="img-container ${skeletonClass}" aria-hidden="true">
             <picture class="responsive-image">
-                ${imageFormats.avif ? `<source data-srcset="${avifUrl}" type="image/avif" sizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 800px">` : ''}
-                ${imageFormats.webp ? `<source data-srcset="${webpUrl}" type="image/webp" sizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 800px">` : ''}
-                <source type="image/jpeg" sizes="(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 800px">
+                ${imageFormats.avif ? `<source ${srcsetAttr}="${avifUrl}" type="image/avif" sizes="${sizes}">` : ''}
+                ${imageFormats.webp ? `<source ${srcsetAttr}="${webpUrl}" type="image/webp" sizes="${sizes}">` : ''}
+                <source type="image/jpeg" sizes="${sizes}">
                 <img 
                     class="main-img"
                     alt="${card.title}" 
-                    data-src="${jpegUrl}"
+                    ${srcAttr}="${jpegUrl}"
+                    ${loading}
+                    ${fetchPriority}
                     width="800"
                     height="500"
-                    decoding="async"
-                    style="opacity: 0; transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1); position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;"
+                    ${decoding}
+                    style="opacity: ${opacity}; transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1); position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;"
                 >
             </picture>
-            <div class="skeleton-placeholder" aria-hidden="true"></div>
+            ${isFirstCard ? '' : '<div class="skeleton-placeholder" aria-hidden="true"></div>'}
         </div>
     `;
 }
 
-grid.innerHTML = cardsData.map(c => `
-<article class="card render-node" role="group" aria-label="${c.title}">
+// إضافة الـ index لمعرفة أول كارت، وإزالة role="group" لحل مشكلة الـ Accessibility
+grid.innerHTML = cardsData.map((c, index) => `
+<article class="card render-node" aria-label="${c.title}">
     <a href="#" class="card-link" tabindex="0">
-        ${generateResponsiveImageHTML(c)}
+        ${generateResponsiveImageHTML(c, index === 0)}
         <span class="category" aria-label="Category">${c.badge}</span>
         <h2 class="title">${c.title}</h2>
         <p class="description">${c.description}</p>
