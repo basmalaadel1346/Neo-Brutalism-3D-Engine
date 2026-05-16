@@ -20,7 +20,9 @@ body.dark {
     --border-color: #000;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -196,11 +198,9 @@ body.panel-hidden .engine-panel {
     content: "";
     position: absolute;
     inset: 0;
-    background: radial-gradient(
-        circle at var(--light-x) var(--light-y),
-        rgba(255, 255, 255, 0.35),
-        transparent 60%
-    );
+    background: radial-gradient(circle at var(--light-x) var(--light-y),
+            rgba(255, 255, 255, 0.35),
+            transparent 60%);
     pointer-events: none;
     border-radius: 17px;
     z-index: 15;
@@ -251,12 +251,10 @@ body.panel-hidden .engine-panel {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.55) 50%,
-        transparent 100%
-    );
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.55) 50%,
+            transparent 100%);
     transform: translate3d(-100%, 0, 0);
     animation: shimmer var(--shimmer-duration) ease-in-out infinite;
     will-change: transform;
@@ -265,8 +263,13 @@ body.panel-hidden .engine-panel {
 }
 
 @keyframes shimmer {
-    0%   { transform: translate3d(-100%, 0, 0); }
-    100% { transform: translate3d(200%, 0, 0); }
+    0% {
+        transform: translate3d(-100%, 0, 0);
+    }
+
+    100% {
+        transform: translate3d(200%, 0, 0);
+    }
 }
 
 .skeleton-placeholder {
@@ -326,12 +329,10 @@ body.panel-hidden .engine-panel {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.55) 50%,
-        transparent 100%
-    );
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.55) 50%,
+            transparent 100%);
     transform: translate3d(-100%, 0, 0);
     animation: shimmer var(--shimmer-duration) ease-in-out infinite;
     will-change: transform;
@@ -349,12 +350,10 @@ body.dark .skeleton-text {
 }
 
 body.dark .skeleton-text::after {
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.15) 50%,
-        transparent 100%
-    );
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.15) 50%,
+            transparent 100%);
 }
 
 .category {
@@ -483,7 +482,9 @@ body.dark .motion-btn:focus-visible {
 }
 
 @media (prefers-contrast: more) {
-    body { color: #000; }
+    body {
+        color: #000;
+    }
 
     .btn,
     .motion-btn {
@@ -491,10 +492,13 @@ body.dark .motion-btn:focus-visible {
         box-shadow: 6px 6px 0 0 #000;
     }
 
-    .card { border-width: 4px; }
+    .card {
+        border-width: 4px;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .skeleton-img-container::after,
     .skeleton-text::after {
         animation: none;
