@@ -4,10 +4,50 @@ import { initEngine } from './engine.js';
 
 const grid = document.getElementById("grid");
 
+let shimmerObserver = null;
+
+function initShimmerObserver() {
+    shimmerObserver = new IntersectionObserver(
+        (entries) => {
+            entries.forEach(entry => {
+                entry.target.classList.toggle('shimmer-paused', !entry.isIntersecting);
+            });
+        },
+        { rootMargin: '50px', threshold: 0 }
+    );
+
+    document.querySelectorAll('.skeleton-img-container, .skeleton-text').forEach(el => {
+        shimmerObserver.observe(el);
+    });
+}
+
+const willChangeCleanupMap = new WeakMap();
+
+function applyWillChange(el, properties) {
+    if (willChangeCleanupMap.has(el)) {
+        willChangeCleanupMap.get(el)();
+    }
+
+    el.style.willChange = properties;
+
+    const cleanup = () => {
+        el.style.willChange = 'auto';
+        willChangeCleanupMap.delete(el);
+    };
+
+    el.addEventListener('transitionend', cleanup, { once: true });
+    willChangeCleanupMap.set(el, cleanup);
+}
+
+function initCardWillChange(card) {
+    card.addEventListener('pointerenter', () => {
+        applyWillChange(card, 'transform');
+    }, { passive: true });
+}
+
 const ImageLoader = (() => {
     const state = {
         loadingImages: new Set(),
-        pendingImages: new Map(),
         loadedImages: new Set(),
         scrollVelocity: 0,
         lastScrollY: 0,
@@ -26,7 +66,6 @@ const ImageLoader = (() => {
             0,
             rect.top > viewportHeight ? rect.top - viewportHeight : Math.abs(rect.bottom)
         );
-
         if (distanceToViewport < 200) return 'high';
         if (distanceToViewport < 600 && scrollVelocity > 2) return 'high';
         if (distanceToViewport < 1000) return 'normal';
@@ -37,7 +76,6 @@ const ImageLoader = (() => {
         const now = performance.now();
         const timeDelta = now - state.lastScrollTime;
         const distanceDelta = Math.abs(window.scrollY - state.lastScrollY);
-
         state.scrollVelocity = timeDelta > 0 ? distanceDelta / timeDelta : 0;
         state.lastScrollY = window.scrollY;
         state.lastScrollTime = now;
@@ -53,14 +91,13 @@ const ImageLoader = (() => {
         if (state.loadingImages.has(img) || state.loadedImages.has(img)) return;
 
         state.loadingImages.add(img);
-        const dataSrc = img.closest('.img-container')?.querySelector('[data-src]')?.dataset.src;
+        const dataSrc = img.dataset.src || img.closest('.img-container')?.querySelector('[data-src]')?.dataset.src;
 
         if (!dataSrc) return;
 
         const picture = img.closest('picture');
         if (picture) {
-            const sources = picture.querySelectorAll('source');
-            sources.forEach(source => {
+            picture.querySelectorAll('source').forEach(source => {
                 const dataSrcset = source.dataset.srcset;
                 if (dataSrcset) source.srcset = dataSrcset;
             });
@@ -72,7 +109,12 @@ const ImageLoader = (() => {
             img.style.opacity = '1';
             state.loadingImages.delete(img);
             state.loadedImages.add(img);
-            img.closest('.img-container')?.classList.remove('skeleton-img-container');
+
+            const container = img.closest('.img-container');
+            if (container) {
+                container.classList.remove('skeleton-img-container');
+                shimmerObserver?.unobserve(container);
+            }
         };
 
         tempImg.onerror = () => {
@@ -108,65 +150,44 @@ const ImageLoader = (() => {
 
     const scheduleImageLoad = (img, priority) => {
         if (priority === 'high') {
-            if (!state.highPriorityQueue.includes(img)) {
-                state.highPriorityQueue.push(img);
-            }
+            if (!state.highPriorityQueue.includes(img)) state.highPriorityQueue.push(img);
         } else {
-            if (!state.normalPriorityQueue.includes(img)) {
-                state.normalPriorityQueue.push(img);
-            }
+            if (!state.normalPriorityQueue.includes(img)) state.normalPriorityQueue.push(img);
         }
         processQueue();
     };
 
     const observeImages = () => {
-        const observerOptions = {
-            rootMargin: '400px',
-            threshold: 0
-        };
-
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
                 const img = entry.target;
-
-                if (entry.isIntersecting) {
-                    calculateScrollVelocity();
-                    const rect = entry.boundingClientRect;
-                    const mouseProximity = getMouseDistance(rect);
-                    const nearMouse = mouseProximity < state.preloadRadius;
-                    const priority = getImagePriority(rect, state.scrollVelocity);
-                    const finalPriority = (priority === 'high' || nearMouse) ? 'high' : 'normal';
-
-                    scheduleImageLoad(img, finalPriority);
-                }
+                calculateScrollVelocity();
+                const rect = entry.boundingClientRect;
+                const nearMouse = getMouseDistance(rect) < state.preloadRadius;
+                const priority = getImagePriority(rect, state.scrollVelocity);
+                const finalPriority = (priority === 'high' || nearMouse) ? 'high' : 'normal';
+                scheduleImageLoad(img, finalPriority);
             });
-        }, observerOptions);
+        }, { rootMargin: '400px', threshold: 0 });
 
-        document.querySelectorAll('.main-img[data-src]').forEach(img => {
-            observer.observe(img);
-        });
+        document.querySelectorAll('.main-img[data-src]').forEach(img => observer.observe(img));
     };
 
     const loadViewportImages = () => {
-        const viewportImages = [];
-        const allImages = document.querySelectorAll('.main-img[data-src]');
-
-        allImages.forEach(img => {
+        document.querySelectorAll('.main-img[data-src]').forEach(img => {
             const rect = img.getBoundingClientRect();
             if (rect.top < window.innerHeight && rect.bottom > 0) {
-                viewportImages.push(img);
+                scheduleImageLoad(img, 'high');
             }
         });
-
-        viewportImages.forEach(img => scheduleImageLoad(img, 'high'));
     };
 
     const init = () => {
         document.addEventListener('mousemove', (e) => {
             state.mouseX = e.clientX;
             state.mouseY = e.clientY;
-        });
-
+        }, { passive: true });
         window.addEventListener('scroll', calculateScrollVelocity, { passive: true });
         loadViewportImages();
         observeImages();
@@ -181,7 +202,6 @@ function generateResponsiveImageHTML(card, isFirstCard) {
     const webpUrl = imageFormats.webp || card.image;
     const jpegUrl = imageFormats.jpeg || card.image;
 
-    // تحديد الخصائص بناءً على إذا كانت هذه هي الصورة الأولى أم لا
     const srcAttr = isFirstCard ? 'src' : 'data-src';
     const srcsetAttr = isFirstCard ? 'srcset' : 'data-srcset';
     const fetchPriority = isFirstCard ? 'fetchpriority="high"' : '';
@@ -189,7 +209,7 @@ function generateResponsiveImageHTML(card, isFirstCard) {
     const decoding = isFirstCard ? 'decoding="auto"' : 'decoding="async"';
     const opacity = isFirstCard ? '1' : '0';
     const skeletonClass = isFirstCard ? '' : 'skeleton-img-container';
-    
+
     const sizes = "(max-width: 600px) 100vw, (max-width: 1200px) 50vw, 400px";
 
     return `
@@ -198,9 +218,9 @@ function generateResponsiveImageHTML(card, isFirstCard) {
                 ${imageFormats.avif ? `<source ${srcsetAttr}="${avifUrl}" type="image/avif" sizes="${sizes}">` : ''}
                 ${imageFormats.webp ? `<source ${srcsetAttr}="${webpUrl}" type="image/webp" sizes="${sizes}">` : ''}
                 <source type="image/jpeg" sizes="${sizes}">
-                <img 
+                <img
                     class="main-img"
-                    alt="${card.title}" 
+                    alt="${card.title}"
                     ${srcAttr}="${jpegUrl}"
                     ${loading}
                     ${fetchPriority}
@@ -215,36 +235,66 @@ function generateResponsiveImageHTML(card, isFirstCard) {
     `;
 }
 
-// إضافة الـ index لمعرفة أول كارت، وإزالة role="group" لحل مشكلة الـ Accessibility
-grid.innerHTML = cardsData.map((c, index) => `
-<article class="card render-node" aria-label="${c.title}">
+const SHIMMER_STAGGER_MS = 200;
+const SHIMMER_STAGGER_CYCLE = 4;
+
+grid.innerHTML = cardsData.map((c, index) => {
+    const shimmerDelay = (index % SHIMMER_STAGGER_CYCLE) * SHIMMER_STAGGER_MS;
+
+    return `
+<article class="card render-node"
+         aria-label="${c.title}"
+         style="--shimmer-delay: ${shimmerDelay}ms">
+    <div class="card-pulse" aria-hidden="true"></div>
     <a href="#" class="card-link" tabindex="0">
         ${generateResponsiveImageHTML(c, index === 0)}
         <span class="category" aria-label="Category">${c.badge}</span>
         <h2 class="title">${c.title}</h2>
         <p class="description">${c.description}</p>
     </a>
-</article>`).join('');
+</article>`;
+}).join('');
 
 document.addEventListener('DOMContentLoaded', () => {
     ImageLoader.init();
     initInputListeners();
     initEngine();
+    initShimmerObserver();
+
+    document.querySelectorAll('.card').forEach(card => initCardWillChange(card));
 });
+
+const panel = document.getElementById('controls');
+const togglePanelBtn = document.getElementById('toggle-panel');
+
+togglePanelBtn.onclick = () => {
+    applyWillChange(panel, 'transform, opacity');
+    const isHidden = document.body.classList.toggle('panel-hidden');
+    togglePanelBtn.setAttribute('aria-pressed', String(!isHidden));
+};
 
 const gyroBtn = document.getElementById('gyro-btn');
 
 if (!('ontouchstart' in window) && !navigator.maxTouchPoints) {
     if (gyroBtn) gyroBtn.style.display = 'none';
 }
-document.getElementById('gyro-btn').onclick = function () { toggleGyro(this); };
-
-document.getElementById('toggle-panel').onclick = () => {
-    const isHidden = document.body.classList.toggle('panel-hidden');
-    document.getElementById('toggle-panel').setAttribute('aria-pressed', !isHidden);
-};
+if (gyroBtn) {
+    gyroBtn.onclick = function () { toggleGyro(this); };
+}
 
 document.getElementById('theme-btn').onclick = () => {
-    document.body.classList.toggle('dark');
-    window.dispatchEvent(new Event('scroll'));
+    const toggleTheme = () => {
+        document.body.classList.toggle('dark');
+        window.dispatchEvent(new Event('scroll'));
+    };
+
+    if ('startViewTransition' in document) {
+        try {
+            document.startViewTransition(toggleTheme);
+        } catch {
+            toggleTheme();
+        }
+    } else {
+        toggleTheme();
+    }
 };

@@ -61,7 +61,6 @@ body.panel-hidden .app-layout {
     z-index: 3000;
     color: var(--black);
     transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-    will-change: transform;
 }
 
 body.panel-hidden .engine-panel {
@@ -175,6 +174,20 @@ body.panel-hidden .engine-panel {
     gap: 40px;
     max-width: 1400px;
     margin: 0 auto;
+    perspective: 1000px;
+    perspective-origin: 50% 50%;
+}
+
+.card-pulse {
+    position: absolute;
+    inset: -4px;
+    border-radius: 24px;
+    border: 3px solid var(--sh-color);
+    pointer-events: none;
+    z-index: -1;
+    opacity: calc(var(--pulse-spread) / 30px * 0.75);
+    transform: scale(calc(1 + var(--pulse-spread) / 30px * 0.06));
+    transition: opacity 0.12s linear, transform 0.12s linear;
 }
 
 .card {
@@ -188,10 +201,11 @@ body.panel-hidden .engine-panel {
     --scale: 1;
     --light-x: 50%;
     --light-y: 50%;
-
-    transform: perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) scale3d(var(--scale), var(--scale), 1);
+    transform: rotateX(var(--rx)) rotateY(var(--ry)) scale3d(var(--scale), var(--scale), 1);
     transform-style: preserve-3d;
-    box-shadow: 8px 8px var(--pulse-spread) 0 var(--sh-color);
+    box-shadow: 8px 8px 0 0 var(--sh-color);
+    content-visibility: auto;
+    contain-intrinsic-size: 0 430px;
 }
 
 .card::before {
@@ -256,10 +270,15 @@ body.panel-hidden .engine-panel {
             rgba(255, 255, 255, 0.55) 50%,
             transparent 100%);
     transform: translate3d(-100%, 0, 0);
-    animation: shimmer var(--shimmer-duration) ease-in-out infinite;
+    animation: shimmer var(--shimmer-duration) ease-in-out var(--shimmer-delay, 0ms) infinite;
     will-change: transform;
     pointer-events: none;
     border-radius: inherit;
+}
+
+.skeleton-img-container.shimmer-paused::after,
+.skeleton-text.shimmer-paused::after {
+    animation-play-state: paused;
 }
 
 @keyframes shimmer {
@@ -278,7 +297,6 @@ body.panel-hidden .engine-panel {
     background: rgba(0, 0, 0, 0.1);
     opacity: 1;
     transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1);
-    will-change: opacity;
 }
 
 .img-container:not(.skeleton-img-container) .skeleton-placeholder {
@@ -301,7 +319,6 @@ body.panel-hidden .engine-panel {
     color: inherit;
     outline: none;
     border-radius: 17px;
-    transition: box-shadow 0.2s ease;
 }
 
 .card-link:focus-visible {
@@ -334,7 +351,7 @@ body.panel-hidden .engine-panel {
             rgba(255, 255, 255, 0.55) 50%,
             transparent 100%);
     transform: translate3d(-100%, 0, 0);
-    animation: shimmer var(--shimmer-duration) ease-in-out infinite;
+    animation: shimmer var(--shimmer-duration) ease-in-out var(--shimmer-delay, 0ms) infinite;
     will-change: transform;
     pointer-events: none;
 }
@@ -498,23 +515,31 @@ body.dark .motion-btn:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
     .skeleton-img-container::after,
     .skeleton-text::after {
         animation: none;
-        transform: translate3d(0%, 0, 0);
+        transform: none;
         opacity: 0.4;
     }
 
     .card,
+    .card::before,
     .img-container,
     .title,
-    .description,
-    .card::before {
+    .description {
         transition: none;
+    }
+
+    .card-pulse {
+        transition: none;
+        opacity: 0;
     }
 
     .skeleton-placeholder {
         transition: opacity 0.2s ease;
+    }
+
+    .engine-panel {
+        transition: opacity 0.15s ease, transform 0.15s ease;
     }
 }
