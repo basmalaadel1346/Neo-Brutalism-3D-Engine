@@ -22,6 +22,8 @@ export function initGyroscope() {
 }
 
 function activateGyroscope(motionBtn) {
+    const cards = Array.from(document.querySelectorAll('.card'));
+
     window.addEventListener('deviceorientation', (event) => {
         let tiltX = event.beta;
         let tiltY = event.gamma;
@@ -33,7 +35,7 @@ function activateGyroscope(motionBtn) {
         const normalizedX = tiltY / maxTilt;
         const normalizedY = tiltX / maxTilt;
 
-        document.querySelectorAll('.card').forEach(card => {
+        cards.forEach(card => {
             card.style.setProperty('--rx', `${normalizedY * 15}deg`);
             card.style.setProperty('--ry', `${normalizedX * 15}deg`);
         });

@@ -228,7 +228,7 @@ function generateResponsiveImageHTML(card, isFirstCard) {
     const srcsetAttr = isFirstCard ? 'srcset' : 'data-srcset';
     const fetchPriority = isFirstCard ? 'fetchpriority="high"' : '';
     const loading = isFirstCard ? 'loading="eager"' : 'loading="lazy"';
-    const decoding = isFirstCard ? 'decoding="auto"' : 'decoding="async"';
+    const decoding = isFirstCard ? 'decoding="sync"' : 'decoding="async"';
     const opacity = isFirstCard ? '1' : '0';
     const skeletonClass = isFirstCard ? '' : 'skeleton-img-container';
 
