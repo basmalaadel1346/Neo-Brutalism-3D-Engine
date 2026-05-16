@@ -50,14 +50,33 @@ const ImageLoader = (() => {
         loadingImages: new Set(),
         loadedImages: new Set(),
         scrollVelocity: 0,
-        lastScrollY: 0,
-        lastScrollTime: 0,
+        lastScrollY: window.scrollY,
+        lastScrollTime: performance.now(),
         mouseX: 0,
         mouseY: 0,
         preloadRadius: 600,
         highPriorityQueue: [],
         normalPriorityQueue: [],
-        idleCallbackId: null
+        idleCallbackId: null,
+        pendingScrollRead: false,
+        cachedScrollY: window.scrollY
+    };
+
+    const calculateScrollVelocity = () => {
+        if (state.pendingScrollRead) return;
+        state.pendingScrollRead = true;
+
+        requestAnimationFrame(() => {
+            const now = performance.now();
+            const currentScrollY = window.scrollY;
+            const timeDelta = now - state.lastScrollTime;
+            const distanceDelta = Math.abs(currentScrollY - state.lastScrollY);
+            state.scrollVelocity = timeDelta > 0 ? distanceDelta / timeDelta : 0;
+            state.lastScrollY = currentScrollY;
+            state.cachedScrollY = currentScrollY;
+            state.lastScrollTime = now;
+            state.pendingScrollRead = false;
+        });
     };
 
     const getImagePriority = (rect, scrollVelocity) => {
@@ -70,15 +89,6 @@ const ImageLoader = (() => {
         if (distanceToViewport < 600 && scrollVelocity > 2) return 'high';
         if (distanceToViewport < 1000) return 'normal';
         return 'low';
-    };
-
-    const calculateScrollVelocity = () => {
-        const now = performance.now();
-        const timeDelta = now - state.lastScrollTime;
-        const distanceDelta = Math.abs(window.scrollY - state.lastScrollY);
-        state.scrollVelocity = timeDelta > 0 ? distanceDelta / timeDelta : 0;
-        state.lastScrollY = window.scrollY;
-        state.lastScrollTime = now;
     };
 
     const getMouseDistance = (rect) => {
@@ -159,15 +169,20 @@ const ImageLoader = (() => {
 
     const observeImages = () => {
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                const img = entry.target;
-                calculateScrollVelocity();
-                const rect = entry.boundingClientRect;
-                const nearMouse = getMouseDistance(rect) < state.preloadRadius;
-                const priority = getImagePriority(rect, state.scrollVelocity);
-                const finalPriority = (priority === 'high' || nearMouse) ? 'high' : 'normal';
-                scheduleImageLoad(img, finalPriority);
+            const reads = entries.map(entry => ({
+                img: entry.target,
+                isIntersecting: entry.isIntersecting,
+                rect: entry.boundingClientRect
+            }));
+
+            requestAnimationFrame(() => {
+                reads.forEach(({ img, isIntersecting, rect }) => {
+                    if (!isIntersecting) return;
+                    const nearMouse = getMouseDistance(rect) < state.preloadRadius;
+                    const priority = getImagePriority(rect, state.scrollVelocity);
+                    const finalPriority = (priority === 'high' || nearMouse) ? 'high' : 'normal';
+                    scheduleImageLoad(img, finalPriority);
+                });
             });
         }, { rootMargin: '400px', threshold: 0 });
 
@@ -175,11 +190,18 @@ const ImageLoader = (() => {
     };
 
     const loadViewportImages = () => {
-        document.querySelectorAll('.main-img[data-src]').forEach(img => {
-            const rect = img.getBoundingClientRect();
-            if (rect.top < window.innerHeight && rect.bottom > 0) {
-                scheduleImageLoad(img, 'high');
-            }
+        const imgs = Array.from(document.querySelectorAll('.main-img[data-src]'));
+
+        const rects = imgs.map(img => img.getBoundingClientRect());
+
+        requestAnimationFrame(() => {
+            const viewportHeight = window.innerHeight;
+            imgs.forEach((img, i) => {
+                const rect = rects[i];
+                if (rect.top < viewportHeight && rect.bottom > 0) {
+                    scheduleImageLoad(img, 'high');
+                }
+            });
         });
     };
 
