@@ -91,11 +91,12 @@ export class ImageOptimizer {
         return `${baseUrl}.jpg`;
     }
 
-    
+
     static initializeAllImages() {
         const support = this.checkFormatSupport();
 
-        if (process.env.NODE_ENV !== 'production') {
+        // تحقق آمن يمنع ظهور خطأ في المتصفح
+        if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
             console.log('Image Format Support:', {
                 avif: support.avif ? '✓' : '✗',
                 webp: support.webp ? '✓' : '✗',
