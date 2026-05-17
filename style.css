@@ -2,7 +2,6 @@
     --yellow: #F4D04E;
     --black: #000;
     --white: #fff;
-    --grey: #7F7F7F;
     --accent: #ff7a00;
     --sh-color: hsl(0, 0%, 0%);
     --bg-hue: 45;
@@ -327,8 +326,11 @@ body.panel-hidden .engine-panel {
     padding: 24px;
     text-decoration: none;
     color: inherit;
-    outline: none;
     border-radius: 17px;
+}
+
+.card-link:focus:not(:focus-visible) {
+    outline: none;
 }
 
 .card-link:focus-visible {
@@ -338,19 +340,12 @@ body.panel-hidden .engine-panel {
     outline-offset: 2px;
 }
 
-.card-content {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
 .skeleton-text {
     position: relative;
     overflow: hidden;
     background: #ddd;
     border-radius: 4px;
     color: transparent;
-    /* ::after is declared in the shared .skeleton-img-container::after, .skeleton-text::after rule above. */
 }
 
 .img-container:not(.skeleton-img-container) .skeleton-text {

@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
         content="Neo-Brutalism 3D Engine - Interactive 3D physics simulation with responsive image gallery" />
-    <link rel="canonical" href="/" />
+    <link rel="canonical" href="https://basmalaadel1346.github.io/Neo-Brutalism-3D-Engine/" />
     <title>Ultimate Neo-Brutalism 3D Engine</title>
 
     <!-- Open Graph -->
     <meta property="og:title"       content="Ultimate Neo-Brutalism 3D Engine" />
     <meta property="og:description" content="Interactive 3D physics simulation with a responsive image gallery." />
     <meta property="og:type"        content="website" />
+    <meta property="og:image"       content="https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=1200&h=630&fit=crop&fm=jpg&q=80" />
 
     <!-- Security -->
     <meta http-equiv="Content-Security-Policy" content="
@@ -35,10 +36,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <!-- Non-blocking font load -->
-    <link rel="preload"
+    <link rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap"
-          as="style"
-          onload="this.rel='stylesheet'">
+          media="print"
+          onload="this.media='all'">
     <noscript>
         <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;800&display=swap" rel="stylesheet">
     </noscript>
@@ -57,7 +58,7 @@
 
     <div class="app-layout">
 
-        <aside class="engine-panel" id="controls" role="complementary" aria-label="Physics Engine Controls">
+        <aside class="engine-panel" id="controls" aria-label="Physics Engine Controls">
             <h2>Physics Engine Tuning</h2>
             <!--
                 #enable-motion: mobile-only; wired to the same toggleGyro() as #gyro-btn.
@@ -71,29 +72,25 @@
                 <div class="control-group">
                     <label for="w-local">Local Hover <span>(Mouse)</span></label>
                     <input type="range" id="w-local" min="0" max="30" value="15"
-                        aria-valuemin="0" aria-valuemax="30"
-                        aria-label="Local hover effect weight">
+                        aria-valuemin="0" aria-valuemax="30">
                     <output for="w-local" id="w-local-value">15</output>
                 </div>
                 <div class="control-group">
                     <label for="w-global">Global Gravity <span>(Env)</span></label>
                     <input type="range" id="w-global" min="0" max="10" value="3"
-                        aria-valuemin="0" aria-valuemax="10"
-                        aria-label="Global gravity effect weight">
+                        aria-valuemin="0" aria-valuemax="10">
                     <output for="w-global" id="w-global-value">3</output>
                 </div>
                 <div class="control-group">
                     <label for="w-gyro">Gyroscope <span>(Device)</span></label>
                     <input type="range" id="w-gyro" min="0" max="40" value="20"
-                        aria-valuemin="0" aria-valuemax="40"
-                        aria-label="Gyroscope device weight">
+                        aria-valuemin="0" aria-valuemax="40">
                     <output for="w-gyro" id="w-gyro-value">20</output>
                 </div>
                 <div class="control-group">
                     <label for="w-scroll">Scroll Velocity <span>(Pulse)</span></label>
                     <input type="range" id="w-scroll" min="0" max="1" step="0.01" value="0.1"
-                        aria-valuemin="0" aria-valuemax="1"
-                        aria-label="Scroll velocity pulse weight">
+                        aria-valuemin="0" aria-valuemax="1">
                     <output for="w-scroll" id="w-scroll-value">0.1</output>
                 </div>
             </fieldset>

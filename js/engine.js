@@ -1,18 +1,6 @@
-/**
- * engine.js
- * ---------
- * Orchestrates the per-frame render loop over all visible RenderNodes.
- *
- * Changes from previous version:
- *  - Removed: initGyroscope() import/call (Gyroscope.js deleted — logic in InputManager.js).
- *  - Added:   RAF handle stored so the loop can be suspended when no nodes are active
- *             and the scene is idle, saving battery on low-end devices.
- *  - Added:   Loop auto-resumes when a node re-enters the viewport.
- */
-
-import { RenderNode }             from './CardRenderer.js';
-import { GlobalState, Weights }   from './InputManager.js';
-import { applyProximityPhysics }  from './Physics.js';
+import { RenderNode }            from './CardRenderer.js';
+import { GlobalState, Weights }  from './InputManager.js';
+import { applyProximityPhysics } from './Physics.js';
 
 const DEBUG = new URLSearchParams(location.search).has('debug');
 
@@ -30,36 +18,25 @@ window.__renderDiag = {
 };
 
 export function initEngine() {
-    const rawNodes   = Array.from(document.querySelectorAll('.render-node'));
+    const rawNodes    = Array.from(document.querySelectorAll('.render-node'));
     const activeNodes = new Set();
     const nodeMap     = new Map();
 
     rawNodes.forEach(el => nodeMap.set(el, new RenderNode(el, GlobalState, Weights)));
 
-    // ------------------------------------------------------------------
-    // RAF handle — stored so we can cancel/resume the loop
-    // ------------------------------------------------------------------
     let rafId = null;
 
     const startLoop = () => {
         if (!rafId) rafId = requestAnimationFrame(loop);
     };
 
-    const stopLoop = () => {
-        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    };
-
-    // ------------------------------------------------------------------
-    // Visibility observer — activates/deactivates nodes as they scroll in/out.
-    // Also resumes the RAF loop when the first node becomes active.
-    // ------------------------------------------------------------------
     const visibilityObserver = new IntersectionObserver(entries => {
         entries.forEach(e => {
             const node = nodeMap.get(e.target);
             if (!node) return;
             if (e.isIntersecting) {
                 activeNodes.add(node);
-                startLoop();           // resume if the loop was suspended
+                startLoop();
             } else {
                 activeNodes.delete(node);
                 node.dirty = true;
@@ -69,33 +46,25 @@ export function initEngine() {
 
     rawNodes.forEach(el => visibilityObserver.observe(el));
 
-    // ------------------------------------------------------------------
-    // FPS meter
-    // ------------------------------------------------------------------
     const fpsMeter = document.getElementById('fps-meter');
     let frames         = 0;
     let fpsAccumulator = 0;
     let lastFrameTime  = performance.now();
 
-    // ------------------------------------------------------------------
-    // Main render loop
-    // ------------------------------------------------------------------
     function loop() {
-        rafId = null; // clear before deciding whether to re-queue
-
-        const now = performance.now();
-
-        // Idle guard — suspend the loop entirely when nothing is happening.
-        // It will be restarted by the visibilityObserver or by wakeUp() in InputManager.
+        rafId = null;
+        const now    = performance.now();
         const isIdle = now - GlobalState.lastInteraction > 3000;
+
         if (isIdle && activeNodes.size === 0) {
-            // Loop suspended — do not re-queue.
+            // Reset so the first active frame after resume has a clean delta.
+            lastFrameTime = now;
             return;
         }
 
-        // Skip physics computation while idle but keep the meter ticking.
         if (!isIdle) {
             const deltaTime = Math.min((now - lastFrameTime) / 1000, 0.1);
+            lastFrameTime = now;
 
             let hoveredNode = null;
             for (const node of activeNodes) {
@@ -137,10 +106,8 @@ export function initEngine() {
             }
         }
 
-        lastFrameTime = now;
         rafId = requestAnimationFrame(loop);
     }
 
-    // Kick off the loop once on init.
     startLoop();
 }
